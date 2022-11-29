@@ -13,8 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ##Description of data
 
 
-Just testing to the project :)
-
 The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
 
 ```{r, echo=FALSE}
