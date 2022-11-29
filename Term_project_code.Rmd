@@ -1,0 +1,588 @@
+---
+title: "Term Project - Group 80"
+author: "Sari Ropponen, Outi Boman, Loic Dreano"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Description of data
+
+The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
+
+```{r, echo=FALSE}
+npf <- read.csv("npf_train.csv")
+npf_hidden <- read.csv("npf_test_hidden.csv")
+```
+
+The features of the data are
+```{r, echo=FALSE}
+names(npf)
+```
+
+The features include a lot of different measures of atmosphere taken in XXXX. Most of the features like temperature and CO2 are measured in different levels - the level indicated in the name of the feature. 
+---- add text to describe the data --------
+
+## Preprocessing data
+
+The summary of first 10 features in training data is:
+
+```{r, echo=FALSE}
+summary(npf[,1:10])
+```
+
+The column "date" was set to be the row names. Columns "id", "date" and "partlybad" were removed from the data. Because the value of the logical variable "partlybad" is FALSE for all the observations, it doesn't give any information.
+
+```{r, echo=FALSE}
+rownames(npf) <- npf[,"date"]
+npf <- npf[, -c(1, 2, 4)]
+```
+
+A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to class4. Class4 indicates the type of the event if it has happened, values "Ia", "Ib" or "II", or "nonevent" if no event has happened during the day. 
+
+```{r, echo=FALSE}
+npf$class2 <- factor("event", levels = c("nonevent", "event"))
+npf$class2[npf$class4 =="nonevent"] <- "nonevent"
+```
+
+The task is to build a classifier which divides observations into two classes: "event" or "nonevent"
+
+## Data exploration
+
+First, the correlations between different mean values are investigated:
+
+```{r, echo=FALSE}
+library(corrplot)
+cm <- cor(npf[, endsWith(colnames(npf), ".mean")])
+colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
+corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
+```
+
+
+The same picture for different standard deviation values:
+```{r, echo=FALSE}
+cm_sd <- cor(npf[, endsWith(colnames(npf), ".std")])
+colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub(".std","",s))
+corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
+```
+There are many features (variables) that are correlated with each others. Before excluding any variable the variables are investigated also using Lasso and decision trees.
+
+##Performance measures
+To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity a rescaled variant of log-likelihood. If perplexity = 1 the classifier predicts always the probability of an observation to an actual class. Perplexity = 2 corresponds to coin flipping.
+
+Observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
+
+Performance measures are calculated using validation method: the training data is randomly divided into 2 equally large data sets, training data to fit the model and validation data to estimate the accuracy and perplexity. Both data sets have 232 observations. 
+
+-----CHANGES 27.11.2022----------
+10-fold Cross-Validation is also used to the original training data (with 464 observations) to estimate performance measures in testing data.
+-----CHANGES END----------------
+
+The alternative response "class4" is removed from the data so that it doesn't disturb the fitting.
+
+```{r, echo=FALSE}
+set.seed(42)
+train <- sample(1:nrow(npf), 232)
+npf_train <- npf[train, -1]
+npf_valid <- npf[-train, -1]
+
+#to calculate mean, class2 needs to be converted into numeric values
+class2_num_train <- c(ifelse(npf_train$class2=="event",1,0))
+class2_num <- c(ifelse(npf_valid$class2=="event",1,0))
+class2_num_all <- c(ifelse(npf$class2=="event",1,0))
+
+## accuracy if we know the probabilities of ones
+accuracy <- function(p, y) mean(ifelse(p >= 0.5, 1, 0) == y)
+## perplexity if we know the probabilities of ones
+perplexity <- function(p, y) exp(-mean(log(ifelse(y == "event", p, 1 - p))))
+
+#initialization of result table
+npf_results <- data.frame(matrix(ncol = 7))
+colnames(npf_results) = c("Model", "Train Accuracy", "Validation Accuracy","CV Accuracy", "Train Perplexity", "Validation Perplexity", "CV Perplexity")
+npf_results <- na.omit(npf_results)
+```
+
+##Investigation of features with Lasso, Decision Trees and PCA
+To find the most important variables logistic regression with Lasso, decision tree ("basic"), random forest and Principal Component Analysis (PCA) are used. The accuracy and perplexity are also calculated.
+
+---- Should we calculate perplexity for trees?
+---- Coefficients that the methods use (or give a non-zero value) could be saved to one table so that the comparison would be easier
+
+1A) Logistic regression with Lasso, lambda = 0.1: coefficients of the variables are
+```{r, echo=FALSE}
+library(glmnet)
+x <- model.matrix(class2 ~., npf_train)[,-1]
+y <- npf_train$class2
+x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+
+m.lasso <- glmnet(x, y, family = "binomial", alpha = 1, lambda = 0.1)
+
+#Train
+phat_LGL_train <- predict(m.lasso, newx = x, type = "response")
+#Test
+phat_LGL <- predict(m.lasso, newx = x.test, type = "response")
+
+#Cross-Validation
+split <- c(rep_len(1:10, length.out = nrow(npf)))
+phat_LGL_CV <- c()
+for (i in 1:10){
+  x <- model.matrix(class2 ~., npf[split!=i,])[,-1]
+  y <- npf$class2[split!=i]
+  x.test <- model.matrix(class2 ~., npf[split==i,])[,-1]
+  mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = 0.1)
+  phat_LGL_CV[split==i]<- predict(mod, newx = x.test, type = "response")
+}
+
+#Performance measures into the table
+npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso 0.1", 
+                                       round(accuracy(phat_LGL_train, class2_num_train),3), 
+                                       round(accuracy(phat_LGL, class2_num),3), 
+                                       round(accuracy(phat_LGL_CV, class2_num_all),3), 
+                                       round(perplexity(phat_LGL_train, npf_train$class2),3), 
+                                       round(perplexity(phat_LGL, npf_valid$class2),3), 
+                                       round(perplexity(phat_LGL_CV, npf$class2),3))
+coef(m.lasso)
+```
+
+1B) Logistic regression with Lasso, lambda selected by Cross-Validation
+```{r, echo=FALSE}
+set.seed(42)
+x <- model.matrix(class2 ~., npf_train)[,-1]
+y <- npf_train$class2
+x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+
+cv.lambda <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
+m.lassoCV <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+
+#Train
+phat_LGLCV_train <- predict(m.lassoCV, newx = x, type = "response")
+#Test
+phat_LGLCV <- predict(m.lassoCV, newx = x.test, type = "response")
+
+#Cross-Validation
+split <- c(rep_len(1:10, length.out = nrow(npf)))
+phat_LGLCV_CV <- c()
+for (i in 1:10){
+  x <- model.matrix(class2 ~., npf[split!=i,])[,-1]
+  y <- npf$class2[split!=i]
+  x.test <- model.matrix(class2 ~., npf[split==i,])[,-1]
+  mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+  phat_LGLCV_CV[split==i]<- predict(mod, newx = x.test, type = "response")
+}
+
+#Performance measures into the table
+npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso CV", 
+                                       round(accuracy(phat_LGLCV_train, class2_num_train),3), 
+                                       round(accuracy(phat_LGLCV, class2_num),3), 
+                                       round(accuracy(phat_LGLCV_CV, class2_num_all),3), 
+                                       round(perplexity(phat_LGLCV_train, npf_train$class2),3), 
+                                       round(perplexity(phat_LGLCV, npf_valid$class2),3), 
+                                       round(perplexity(phat_LGLCV_CV, npf$class2),3))
+```
+
+The selected lambda is
+```{r, echo=FALSE}
+cv.lambda
+```
+
+and the coefficients are
+
+```{r, echo=FALSE}
+coef(m.lassoCV)
+```
+
+2) A "normal" decision tree selects the following variables:
+
+```{r, echo=FALSE}
+library(tree)
+set.seed(42)
+tree.npf <- tree(class2~., npf_train)
+summary(tree.npf)
+```
+
+```{r, echo=FALSE}
+plot(tree.npf)
+text(tree.npf, pretty = 0, cex=0.6)
+```
+Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
+
+```{r, echo=FALSE}
+tree.pred <- predict(tree.npf, npf_valid, type = "class")
+table(tree.pred, npf_valid$class2)
+```
+Predicted classes vs. actual classes for training data:
+
+```{r, echo=FALSE}
+tree.pred_train <- predict(tree.npf, npf_train, type = "class")
+table(tree.pred_train, npf_train$class2)
+```
+The accuracies are respectively
+```{r, echo=FALSE}
+acc_tree <- (91+94)/232
+acc_tree_train <- (110+113)/232
+npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
+round(acc_tree,3)
+round(acc_tree_train,3)
+```
+
+3) Random Forest with 10 variables (square root of the number of features) used in each run
+
+Training
+```{r, echo=FALSE}
+library(randomForest)
+set.seed(42)
+rf.npf <- randomForest(class2~., data = npf_train, mtry = 10, importance = TRUE)
+rf.pred_train <- predict(rf.npf, newdata = npf_train)
+table(rf.pred_train, npf_train$class2)
+```
+
+Validation
+```{r, echo=FALSE}
+rf.pred <- predict(rf.npf, newdata = npf_valid)
+table(rf.pred, npf_valid$class2)
+```
+
+```{r, echo=FALSE}
+acc_tree_train <- (115+117)/232
+acc_tree <- (103+100)/232
+npf_results[nrow(npf_results)+1,] <- c("Random Forest", round(acc_tree_train, 3), round(acc_tree,3), "", "", "","")
+acc_tree_train
+acc_tree
+```
+The importance of the variables are:
+
+```{r, echo=FALSE}
+varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
+```
+
+4) PCA
+PCA is used to the original training data (464 observations) where the variables are centered to have zero mean and scaled to have standard deviation one. The responses "class2" and "class4" are removed from the data because we are using unsupervised learning method. The first two principal components are:
+
+--- okay, the picture is quite messy with all the features in => should we use PCA to find the most important variables or to replace the original training data with scores in the classifiers? If we replace, how do we make predictions to testing data? Using the same loading vectors to test observations?
+
+```{r, echo=FALSE}
+npf_pca <- npf[,-c(1,102)]
+pca.npf <- prcomp(npf_pca, scale = TRUE )
+biplot(pca.npf, scale=0, cex = 0.5)
+```
+The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+pca.npf.var <- pca.npf$sdev^2
+pve <- pca.npf.var/sum(pca.npf.var)
+plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained", ylim =c(0,1), type ="b")
+plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained", ylim =c(0,1), type ="b")
+
+```
+The loadings of 5 first principal components are
+```{r, echo=FALSE}
+pca.npf$rotation[,1:5]
+```
+
+##Conclusions and feature selection
+
+The performance of the classifiers for validation data are:
+
+```{r, echo=FALSE}
+npf_results
+```
+The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
+---- Should we investigate diagnostic plots for log reg? Should be give weight to well performed classifiers when selecting the variables?
+
+All models use the following variables 
+- RHIRGA: mean is more important than std according to tree and RF
+- H2O mean
+- O3 mean (Logistic Regression with Lasso, lambda = CV ("log reg CV") gives small value to std)
+- CO2: tree and RF uses only std, log regs give value to mean too
+- T std
+- SWS.mean 
+
+The following variables are used in all other models but RF
+- NO.std
+- Pamb0.mean or .std
+
+The following variables are used in all other models but "normal" tree
+- CS.mean (.std only in log reg CV)
+
+These variables are used in some models
+- UV_B.std is used only on log reg CV 
+- UV_A.mean is used only in RF
+- RGlob.mean and RGlob.std (RF, mean also in log reg 0.1)
+- PTG.std (tree, RF)
+- NET.mean
+- RPAR.mean
+- SO2
+
+Because the measures in different heights/levels are highly correlated, we select just one of them.
+---- which ones? Should we put more weight to the selections in random forest and log reg CV?
+---- Should be produce boxplots, histograms and/or scatterplots to selected variables
+
+We select the following variables to be used in models:
+---- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
+```{r, echo=FALSE}
+selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
+  #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
+npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
+npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
+npf_trimmed <- npf[, colnames(npf) %in% selection]
+selection
+```
+
+Let's check if there are any correlation left:
+
+```{r, echo=FALSE}
+library(corrplot)
+cm <- cor(npf_trimmed[,-16])
+colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
+corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
+```
+
+
+##Model selection
+---- I tested both 10-fold cross-validation and simple validation approach (train with train data and calculate performance measures with validation data) to Naive Bayes and logistic regression without interaction
+---- CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications to functions...
+
+```{r, echo=FALSE}
+#Cross-Validation Predictions
+#1) split n items into k fold of roughly equal size
+kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
+#2) find cross-validation predictions
+cv <- function(
+    formula,
+    data,
+    model = lm,
+    n = nrow(data),
+    k = min(n, 10),
+    split = kpart(n,k),
+    train = function(data){model(formula, data = data)},
+    pred = function(model, data){predict(model, newdata = data)}){
+  phat <- NULL
+  for (i in 1:k){
+    mod <- train(data[split !=i, ])
+    if (is.null(phat)){
+      phat <- pred(mod, data)
+    } else {
+      phat[split==i]<- pred(mod, data[split==i,])
+    }
+  }
+  phat
+}
+
+```
+
+The models tested to the selected data in addition to decision tree, random forest and logistic regression with Lasso are
+
+1) Dummy: 
+---- write a description of the method and the code itself...
+
+2) Naive Bayes
+```{r, echo=FALSE}
+library(e1071)
+ 
+phat_NB <- function(npf_train_trimmed,
+npf_valid_trimmed,
+model = function(data) naiveBayes(class2 ~ ., data, laplace = 1),
+pred = function(model, x) predict(model, x, type = "raw")[, 2]) {
+  m <- model(npf_train_trimmed)
+  pred(m, npf_valid_trimmed)
+}
+
+#Train
+phat_NB_train <- phat_NB(npf_train_trimmed, npf_train_trimmed)
+#Test
+phat_NB <- phat_NB(npf_train_trimmed, npf_valid_trimmed)
+
+#Cross-Validation
+split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+phat_NBCV <- c()
+for (i in 1:10){
+  mod <- naiveBayes(class2 ~ ., npf_trimmed[split !=i, ], laplace = 1)
+  phat_NBCV[split==i]<- predict(mod, npf_trimmed[split==i,], type = "raw")[,2]
+}
+
+npf_results[nrow(npf_results)+1,] <- c("Naive Bayes, selected data", 
+                                       round(accuracy(phat_NB_train, class2_num_train),3), 
+                                       round(accuracy(phat_NB, class2_num),3), 
+                                       round(accuracy(phat_NBCV, class2_num_all),3), 
+                                       round(perplexity(phat_NB_train, npf_train$class2),3), 
+                                       round(perplexity(phat_NB, npf_valid$class2),3), 
+                                       round(perplexity(phat_NBCV, npf$class2),3))
+
+```
+
+3) Logistic regression
+---- with or without interactions?
+```{r, echo=FALSE}
+library(glmnet)
+
+phat_LG <- function(npf_train_trimmed,
+npf_valid_trimmed,
+model = function(data) glm(class2 ~ ., data, family = "binomial"),
+pred = function(model, x) predict(model, newdata = x, type = "response")) {
+  m <- model(npf_train_trimmed)
+  pred(m, npf_valid_trimmed)
+}
+
+#Train
+phat_LG_train <- phat_LG(npf_train_trimmed, npf_train_trimmed)
+#Test
+phat_LG <- phat_LG(npf_train_trimmed, npf_valid_trimmed)
+
+#Cross-Validation
+split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+phat_LGCV <- c()
+for (i in 1:10){
+  mod <- glm(class2 ~ ., npf_trimmed[split !=i, ], family = "binomial")
+  phat_LGCV[split==i]<- predict(mod, newdata = npf_trimmed[split==i,], type = "response")
+}
+
+npf_results[nrow(npf_results)+1,] <- c("Logreg, selected data", 
+                                       round(accuracy(phat_LG_train, class2_num_train),3), 
+                                       round(accuracy(phat_LG, class2_num),3), 
+                                       round(accuracy(phat_LGCV, class2_num_all),3), 
+                                       round(perplexity(phat_LG_train, npf_train$class2),3), 
+                                       round(perplexity(phat_LG, npf_valid$class2),3), 
+                                       round(perplexity(phat_LGCV, npf$class2),3))
+```
+
+4) k-NN
+K nearest neighbour is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
+```{r, echo=FALSE}
+library(class)
+set.seed(42)
+
+knn.acc <- c()
+
+train.X <- scale(npf_train_trimmed[,-16])
+valid.X <- scale(npf_valid_trimmed[,-16])
+train.Y <- npf_train_trimmed$class2
+valid.Y <- npf_valid_trimmed$class2
+j=0
+
+for (i in c(1, 5, 10, 15, 20, 50)){
+  j=j+1
+  knn.Y <- knn(train.X, valid.X, train.Y, k=i)
+  knn.Y_num <- ifelse(knn.Y=="event",1,0)
+  knn.acc[j] <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
+}
+knn.acc
+```
+When k = 15, the accuracy is highest so 15-NN and 1-NN (for comparison) is added
+
+```{r, echo=FALSE}
+library(class)
+set.seed(42)
+
+train.X <- scale(npf_train_trimmed[,-16])
+valid.X <- scale(npf_valid_trimmed[,-16])
+train.Y <- npf_train_trimmed$class2
+valid.Y <- npf_valid_trimmed$class2
+
+#Train
+knn.Y_train <- knn(train.X, train.X, train.Y, k=15)
+knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
+knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
+#Validation
+knn.Y <- knn(train.X, valid.X, train.Y, k=15)
+knn.Y_num <- ifelse(knn.Y=="event",1,0)
+knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
+
+#Cross-Validation predictions of the class
+knn.Y_CV <- c()
+for (i in 1:10){
+  train.X <- scale(npf_trimmed[split!=i,-16])
+  valid.X <- scale(npf_trimmed[split==i,-16])
+  train.Y <- npf_trimmed$class2[split!=i]
+  valid.Y <- npf_trimmed$class2[split==i]
+
+  knn.Y_CV[split==i] <- knn(train.X, valid.X, train.Y, k=15)
+}
+
+knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
+knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3)
+
+npf_results[nrow(npf_results)+1,] <- c("15-NN selected data", 
+                                       knn.acc_train, 
+                                       knn.acc_valid,
+                                       knn.acc_CV,
+                                       "","","")
+```
+
+
+```{r, echo=FALSE}
+library(class)
+set.seed(42)
+
+train.X <- scale(npf_train_trimmed[,-16])
+valid.X <- scale(npf_valid_trimmed[,-16])
+train.Y <- npf_train_trimmed$class2
+valid.Y <- npf_valid_trimmed$class2
+
+#Train
+knn.Y_train <- knn(train.X, train.X, train.Y, k=1)
+knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
+knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
+#Validation
+knn.Y <- knn(train.X, valid.X, train.Y, k=1)
+knn.Y_num <- ifelse(knn.Y=="event",1,0)
+knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
+
+#Cross-Validation predictions of the class
+knn.Y_CV <- c()
+for (i in 1:10){
+  train.X <- scale(npf_trimmed[split!=i,-16])
+  valid.X <- scale(npf_trimmed[split==i,-16])
+  train.Y <- npf_trimmed$class2[split!=i]
+  valid.Y <- npf_trimmed$class2[split==i]
+
+  knn.Y_CV[split==i] <- knn(train.X, valid.X, train.Y, k=1)
+}
+
+knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
+knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3)
+
+npf_results[nrow(npf_results)+1,] <- c("1-NN selected data", 
+                                       knn.acc_train, 
+                                       knn.acc_valid,
+                                       knn.acc_CV,
+                                       "","","")
+```
+
+5) SVM with radial basis kernel
+----This model was mentioned in lectures in relation to npf data example so it would be nice to add...
+
+
+Performance measures for the methods are:
+```{r, echo=FALSE}
+npf_results
+```
+
+
+##Some own testing...
+
+Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
+
+```{r, echo=FALSE}
+
+split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+
+perplexity_testi <- c()
+
+for (i in 1:10){
+  phat_testi <- c()
+  mod <- glm(class2 ~ ., npf_trimmed[split !=i, ], family = "binomial")
+  phat_testi<- predict(mod, newdata = npf_trimmed[split==i,], type = "response")
+  perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[split==i])
+}
+
+sum(perplexity_testi)/10
+
+```
+
+
+
+End
