@@ -18,6 +18,9 @@ The training data npf_train.csv and testing data npf_test_hidden.csv were downlo
 ```{r, echo=FALSE}
 npf <- read.csv("npf_train.csv")
 npf_hidden <- read.csv("npf_test_hidden.csv")
+dim(npf)
+dim(npf_hidden)
+str(npf)
 ```
 
 The features of the data are
@@ -34,6 +37,10 @@ The summary of first 10 features in training data is:
 
 ```{r, echo=FALSE}
 summary(npf[,1:10])
+# check that there is no variable with sd = 0 and remove them (only work for numercical or factor variable)
+# npf.var = npf[, -which(apply(npf, 2, sd) == 0)]
+# same goal but based on the length of the result of the unique function()
+npf.var = npf[,which(apply(npf, 2, function(x) length(unique(x))) == 1)] 
 ```
 
 The column "date" was set to be the row names. Columns "id", "date" and "partlybad" were removed from the data. Because the value of the logical variable "partlybad" is FALSE for all the observations, it doesn't give any information.
@@ -61,6 +68,70 @@ library(corrplot)
 cm <- cor(npf[, endsWith(colnames(npf), ".mean")])
 colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
 corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
+
+```
+
+```{r,clean based on correlation, echo=FALSE}
+# Function that remove variables if the correlation is greater than s (have to adapt)
+elimcor_sansY<-function(X,s=0.80){
+  #X matrice contenant les variables à grouper
+  #Y vecteur contenant les groupes à prédire
+  #s valeur seuil de corrélation
+  correl=cor(X)
+  stop=F
+  possetap=1:ncol(X)
+  groupes=as.list(1:ncol(X))
+  
+  while (stop==F)
+  {
+    ##regroupement des var pour lesquelles |corr|>0.95
+    gplist<-list(NULL)
+    possglob=1:ncol(correl)
+    for (i in 1:(ncol(correl)))
+    {
+      poss=possglob[-i]
+      gplist[[i]]=c(i,poss[abs(correl[i,poss])>s])
+    }
+    ##on trie les groupes du plus gros au plus petit
+    gplisteff=unlist(lapply(gplist,length))
+    if (any(gplisteff>1))
+    {
+      gplistfin=gplist[gplisteff>1]
+      gplistuniq=unlist(gplist[gplisteff==1])
+      gpsel=NULL
+      ##on sélectionne dans chaque groupe une variable au hasard
+      for (i in 1:length(gplistfin))
+      {
+        selloc=min(gplistfin[[i]])
+        gploc=groupes[[possetap[selloc]]]
+        for (j in 1:length(gplistfin[[i]]))
+        {
+          gploc=c(gploc,groupes[[possetap[gplistfin[[i]][j]]]])				    }
+        groupes[[possetap[selloc]]]=unique(gploc)
+        gpsel=c(gpsel,selloc)
+      }
+      possetap=possetap[c(gplistuniq,unique(gpsel))]
+      correl=cor(X[,possetap])
+    }
+    else stop=T	
+  }
+  #groupeseff=unlist(lapply(groupes,length))
+  #groupes=groupes[groupeseff>1]
+  return(list(possetap=possetap,groupes=groupes))
+}
+
+npf.toclean= npf[,-c(1,102)]
+ind.cor = elimcor_sansY(npf.toclean,0.90)$possetap
+
+npf.clean = npf.toclean[ind.cor]
+
+cm.2 <- cor(npf.clean[, endsWith(colnames(npf.clean), ".mean")])
+colnames(cm.2) <- rownames(cm.2) <- sapply(colnames(cm.2), function(s) gsub(".mean","",s))
+corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
+         addCoef.col ='black', order = 'FPC', diag=FALSE, 
+         tl.cex = 0.5, tl.col = "black",number.cex = 0.5)
+# corrplot(cm.2, order = "FPC", tl.cex=0.5, tl.col= "black")
+
 ```
 
 
