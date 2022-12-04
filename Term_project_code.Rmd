@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ##Description of data
 
-
 The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
 
 ```{r, echo=FALSE}
@@ -23,13 +22,7 @@ dim(npf_hidden)
 str(npf)
 ```
 
-The features of the data are
-```{r, echo=FALSE}
-names(npf)
-```
-
-The features include a lot of different measures of atmosphere taken in XXXX. Most of the features like temperature and CO2 are measured in different levels - the level indicated in the name of the feature. 
----- add text to describe the data --------
+The features include a lot of daily measurements taken in Hyytiälä forestry field station. Some of the features like temperature T and CO2 are measured in different heights - the height indicated in the name of the feature, like T84.mean is the mean temperature at 8.4 meters above the mast base. 
 
 ## Preprocessing data
 
@@ -44,24 +37,25 @@ npf.var = npf[,which(apply(npf, 2, function(x) length(unique(x))) == 1)]
 ```
 
 The column "date" was set to be the row names. Columns "id", "date" and "partlybad" were removed from the data. Because the value of the logical variable "partlybad" is FALSE for all the observations, it doesn't give any information.
+--- Do we remove the deletion of partlybad here and use npf.vars?
 
 ```{r, echo=FALSE}
 rownames(npf) <- npf[,"date"]
 npf <- npf[, -c(1, 2, 4)]
 ```
 
-A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to class4. Class4 indicates the type of the event if it has happened, values "Ia", "Ib" or "II", or "nonevent" if no event has happened during the day. 
+A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to "class4". Variable "class4" indicates the type of the event if it has happened, values "Ia", "Ib" or "II", or "nonevent" if no event has happened during the day. 
 
 ```{r, echo=FALSE}
 npf$class2 <- factor("event", levels = c("nonevent", "event"))
 npf$class2[npf$class4 =="nonevent"] <- "nonevent"
 ```
 
-The task is to build a classifier which divides observations into two classes: "event" or "nonevent"
+The task is to build a classifier which divides observations into two classes: "event" or "nonevent".
 
 ## Data exploration
 
-First, the correlations between different mean values are investigated:
+Because the data includes same measurements at different heights it is expected that there are correlation between variables. First, the correlations between different mean values are investigated:
 
 ```{r, echo=FALSE}
 library(corrplot)
@@ -70,6 +64,15 @@ colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean",""
 corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 
 ```
+The same picture for different standard deviation values:
+```{r, echo=FALSE}
+cm_sd <- cor(npf[, endsWith(colnames(npf), ".std")])
+colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub(".std","",s))
+corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
+```
+
+The variables which have a correlation more than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
+--- should the text say that if "the absolute value of correlation" is more than 0.8...
 
 ```{r,clean based on correlation, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -134,14 +137,8 @@ corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
 
 ```
 
-
-The same picture for different standard deviation values:
-```{r, echo=FALSE}
-cm_sd <- cor(npf[, endsWith(colnames(npf), ".std")])
-colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub(".std","",s))
-corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
-```
 There are many features (variables) that are correlated with each others. Before excluding any variable the variables are investigated also using Lasso and decision trees.
+--- Can we remove this text and strat to use the cleaned data instead?
 
 ##Performance measures
 To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity a rescaled variant of log-likelihood. If perplexity = 1 the classifier predicts always the probability of an observation to an actual class. Perplexity = 2 corresponds to coin flipping.
@@ -150,9 +147,7 @@ Observation is classified as "event" if the estimated posterior probability is m
 
 Performance measures are calculated using validation method: the training data is randomly divided into 2 equally large data sets, training data to fit the model and validation data to estimate the accuracy and perplexity. Both data sets have 232 observations. 
 
------CHANGES 27.11.2022----------
 10-fold Cross-Validation is also used to the original training data (with 464 observations) to estimate performance measures in testing data.
------CHANGES END----------------
 
 The alternative response "class4" is removed from the data so that it doesn't disturb the fitting.
 
@@ -334,7 +329,7 @@ varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 4) PCA
 PCA is used to the original training data (464 observations) where the variables are centered to have zero mean and scaled to have standard deviation one. The responses "class2" and "class4" are removed from the data because we are using unsupervised learning method. The first two principal components are:
 
---- okay, the picture is quite messy with all the features in => should we use PCA to find the most important variables or to replace the original training data with scores in the classifiers? If we replace, how do we make predictions to testing data? Using the same loading vectors to test observations?
+--- okay, the picture is quite messy with all the features in => should we use PCA to find the most important variables or to replace the original training data with scores in the classifiers? 
 
 ```{r, echo=FALSE}
 npf_pca <- npf[,-c(1,102)]
