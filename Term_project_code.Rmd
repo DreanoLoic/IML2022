@@ -3,8 +3,9 @@ title: "Term Project - Group 80"
 author: "Sari Ropponen, Outi Boman, Loic Dreano"
 date: "`r Sys.Date()`"
 output:
-  word_document: default
+  pdf_document: default
   html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -15,10 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
 
 ```{r, echo=FALSE}
+library(tibble)
 npf <- read.csv("npf_train.csv")
 npf_hidden <- read.csv("npf_test_hidden.csv")
 
-df1=data_frame(" "=c("nrow","ncol"))
+df1=data_frame(" "=c("Measurements","Variables"))
 df1$npf_train = dim(npf)
 df1$npf_test = dim(npf_hidden)
 
@@ -80,7 +82,6 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
 
 The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
 --- should the text say that if "the absolute value of correlation" is more than 0.8...
-
 ```{r,clean based on correlation, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
 elimcor_sansY<-function(X,s=0.80){
@@ -134,6 +135,7 @@ ind.corr.80 = elimcor_sansY(npf.corr,0.80)$possetap
 
 # npf.clean = npf.corr[ind.corr.90] # 34 variables
 npf.clean = npf.corr[ind.corr.80] # 26 variables 
+no
 
 cm.2 <- cor(npf.clean[, endsWith(colnames(npf.clean), ".mean")])
 colnames(cm.2) <- rownames(cm.2) <- sapply(colnames(cm.2), function(s) gsub(".mean","",s))
@@ -142,8 +144,11 @@ corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
          tl.cex = 0.5, tl.col = "black",number.cex = 0.5)
 # corrplot(cm.2, order = "FPC", tl.cex=0.5, tl.col= "black")
 
-npf= cbind(npf.clean,class2=npf.var$class2)
+df2=data_frame(" "=c("Measurements","Variables"))
+df2$npf_train = dim(npf.clean)
+df2$npf_test = dim(npf_hidden)
 
+knitr::kable(df2, digits = 3)
 ```
 
 There are many features (variables) that are correlated with each others. Before excluding any variable the variables are investigated also using Lasso and decision trees.
@@ -161,10 +166,16 @@ Performance measures are calculated using validation method: the training data i
 The alternative response "class4" is removed from the data so that it doesn't disturb the fitting.
 
 ```{r, echo=FALSE}
+# which training set ? 
+npf = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
+# npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
+# npf = npf.var[,-1] # Raw data for class2
+# npf = npf.var[,-2] # Raw data for class4
+
 set.seed(42)
-train <- sample(1:nrow(npf), 232)
-npf_train <- npf[train,]
-npf_valid <- npf[-train,]
+train_id <- sample(1:nrow(npf), 232)
+npf_train <- npf[train_id,]
+npf_valid <- npf[-train_id,]
 
 #to calculate mean, class2 needs to be converted into numeric values
 class2_num_train <- c(ifelse(npf_train$class2=="event",1,0))
@@ -340,13 +351,13 @@ PCA is used to the original training data (464 observations) where the variables
 
 --- okay, the picture is quite messy with all the features in => should we use PCA to find the most important variables or to replace the original training data with scores in the classifiers? 
 
-```{r, echo=FALSE}
+```{r, eval=FALSE,echo=FALSE}
 npf_pca <- npf[,-c(1,102)]
 pca.npf <- prcomp(npf_pca, scale = TRUE )
 biplot(pca.npf, scale=0, cex = 0.5)
 ```
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
-```{r, echo=FALSE}
+```{r, echo=FALSE,eval=FALSE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
@@ -355,7 +366,7 @@ plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of
 
 ```
 The loadings of 5 first principal components are
-```{r, echo=FALSE}
+```{r, eval=FALSE,echo=FALSE}
 pca.npf$rotation[,1:5]
 ```
 
@@ -363,7 +374,7 @@ pca.npf$rotation[,1:5]
 
 The performance of the classifiers for validation data are:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,eval=FALSE}
 npf_results
 ```
 The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
