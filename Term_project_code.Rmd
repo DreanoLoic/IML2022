@@ -18,7 +18,6 @@ The training data npf_train.csv and testing data npf_test_hidden.csv were downlo
 npf <- read.csv("npf_train.csv")
 npf_hidden <- read.csv("npf_test_hidden.csv")
 
-<<<<<<< HEAD
 df1=data_frame(" "=c("nrow","ncol"))
 df1$npf_train = dim(npf)
 df1$npf_test = dim(npf_hidden)
@@ -27,8 +26,6 @@ knitr::kable(df1, digits = 3)
 # str(npf)
 ```
 
-=======
->>>>>>> 77f2216ba267bfdf1a0daecfc555b46590abb86d
 The features include a lot of daily measurements taken in Hyytiälä forestry field station. Some of the features like temperature T and CO2 are measured in different heights - the height indicated in the name of the feature, like T84.mean is the mean temperature at 8.4 meters above the mast base. 
 
 ## Preprocessing data
@@ -73,23 +70,15 @@ corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 
 ```
 The same picture for different standard deviation values:
-<<<<<<< HEAD
 ```{r, echo=FALSE,fig.align="center"}
 # the correlation for the standard deviation variable 
 cm_sd <- cor(npf.var[, endsWith(colnames(npf.var), ".std")])
-=======
-```{r, echo=FALSE}
-cm_sd <- cor(npf[, endsWith(colnames(npf), ".std")])
->>>>>>> 77f2216ba267bfdf1a0daecfc555b46590abb86d
 colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub(".std","",s))
 corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
 ```
 
-<<<<<<< HEAD
+
 The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
-=======
-The variables which have a correlation more than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
->>>>>>> 77f2216ba267bfdf1a0daecfc555b46590abb86d
 --- should the text say that if "the absolute value of correlation" is more than 0.8...
 
 ```{r,clean based on correlation, echo=FALSE}
@@ -153,11 +142,8 @@ corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
          tl.cex = 0.5, tl.col = "black",number.cex = 0.5)
 # corrplot(cm.2, order = "FPC", tl.cex=0.5, tl.col= "black")
 
-<<<<<<< HEAD
 npf= cbind(npf.clean,class2=npf.var$class2)
 
-=======
->>>>>>> 77f2216ba267bfdf1a0daecfc555b46590abb86d
 ```
 
 There are many features (variables) that are correlated with each others. Before excluding any variable the variables are investigated also using Lasso and decision trees.
