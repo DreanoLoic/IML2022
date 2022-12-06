@@ -43,7 +43,7 @@ The features include a lot of daily measurements taken in Hyytiälä forestry fi
 
 ## Preprocessing data
 
-The summary of first four features in training data is:
+The summary of the first four features in training data is:
 --- I changed this to be the 4 first because only they are needed to do the next steps of data cleaning. 
 
 ```{r, message=FALSE,echo=FALSE}
@@ -67,11 +67,11 @@ npf.var$class2[npf$class4 =="nonevent"] <- "nonevent"
 npf.var = npf.var[,c(1,102,2:101)]
 ```
 
-The task is to build a classifier which divides observations into two classes: "event" or "nonevent".
+The task is to build a binary classifier which predicts if an NPF event will happen or not during the day according to the observed measurements.
 
 ## Data exploration
 
-Because the data includes same measurements at different heights it is expected that there are correlation between variables. First, the correlations between different mean values are investigated:
+Because the data includes same measurements at different heights it is expected that there are correlation between variables. Correlations between different mean values are shown in the matrix below:
 
 ```{r, message=FALSE, echo=FALSE,fig.align="center"}
 
@@ -83,7 +83,7 @@ corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black",
      mar=c(0,0,1,0))
 
 ```
-The same picture for different standard deviation values:
+The same picture for different standard deviation values is
 ```{r, message=FALSE, echo=FALSE,fig.align="center"}
 # the correlation for the standard deviation variable 
 cm_sd <- cor(npf.var[, endsWith(colnames(npf.var), ".std")])
@@ -96,7 +96,11 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
 As we can see, there are a lot of correlated variables which can cause problems when using machine learning methods. 
 --- I think we should explain more deeply what kind of problems...
 
-The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
+The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. 
+--- Loic, can you write above a better description of what is done (I mean, how the code selects which one are left in the data and which one are removed?)
+
+The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables.
+--- should we put the means and std in the same correlation matrix to see if there are correlation between them (and to save space)?
 
 ```{r, clean based on correlation,message=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -185,19 +189,16 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 ```
 --- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
 
-##Performance measures
-To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity a rescaled variant of log-likelihood. If perplexity = 1 the classifier predicts always the probability of an observation to an actual class. Perplexity = 2 corresponds to coin flipping.
+## Performance measures
 
-For Random Forest perplexity is not calculated but instead ROC curves are looked at.
+To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of 2 corresponds to coin flipping.
+
+For Random Forest and decision tree perplexity is not calculated but instead ROC curves are looked at.
 ---- Did we agree on this? :) ROC should still be added to code below
 
-Observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
+If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
 
-Performance measures are calculated using validation method: the training data is randomly divided into 2 equally large data sets, training data to fit the model and validation data to estimate the accuracy and perplexity. Both data sets have 232 observations. 
-
-10-fold Cross-Validation is also used to the original training data (with 464 observations) to estimate performance measures in testing data.
-
-The alternative response "class4" is removed from the data so that it doesn't disturb the fitting.
+Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally large data sets, training data to fit the model and validation data to estimate the accuracy and perplexity.
 
 ```{r, message=FALSE, echo=FALSE}
 # which training set ? 
@@ -227,11 +228,12 @@ colnames(npf_results) = c("Model", "Train Accuracy", "Validation Accuracy","CV A
 npf_results <- na.omit(npf_results)
 ```
 
-##Investigation of features with Lasso, Decision Trees and PCA
-To find the most important variables logistic regression with Lasso, decision tree ("basic"), random forest and Principal Component Analysis (PCA) are used. The accuracy and perplexity are also calculated.
+## Investigation of features
+
+To find the most important variables logistic regression with Lasso, decision tree ("basic"), random forest and Principal Component Analysis (PCA) are used to cleaned data. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
 
 1) Logistic regression with Lasso, lambda selected by Cross-Validation
---- this code is updated to use npf.all.clean data in CV
+
 ```{r, message=FALSE, echo=FALSE}
 
 set.seed(42)
@@ -314,13 +316,13 @@ round(acc_tree,3)
 round(acc_tree_train,3)
 ```
 
-3) Random Forest with 10 variables (square root of the number of features) used in each run
+3) Random Forest with 5 variables (square root of the number of features) used in each run
 
 Confusion matrix for training data
 ```{r, message=FALSE, echo=FALSE}
 
 set.seed(42)
-rf.npf <- randomForest(class2~., data = npf_train, mtry = 10, importance = TRUE)
+rf.npf <- randomForest(class2~., data = npf_train, mtry = 5, importance = TRUE)
 rf.pred_train <- predict(rf.npf, newdata = npf_train)
 table(rf.pred_train, npf_train$class2)
 ```
@@ -418,7 +420,8 @@ The performance of the classifiers investigated so far are:
 npf_results
 ```
 
-##Conclusions and feature selection
+## Conclusions and feature selection
+
 --- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection done here. !!!
 
 The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
@@ -455,27 +458,27 @@ Because the measures in different heights/levels are highly correlated, we selec
 We select the following variables to be used in models:
 ---- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
 ```{r, message=FALSE, echo=FALSE}
-selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
+#selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
   #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
-npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
-npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
-npf_trimmed <- npf[, colnames(npf) %in% selection]
-selection
+#npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
+#npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
+#npf_trimmed <- npf[, colnames(npf) %in% selection]
+#selection
 ```
 
 Let's check if there are any correlation left:
 
 ```{r, message=FALSE, echo=FALSE}
-cm <- cor(npf_trimmed[,-16])
-colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
-corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
+#cm <- cor(npf_trimmed[,-16])
+#colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
+#corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 ```
 
 
-##Model selection
---- CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications to functions...
+## Model selection
 
 ```{r, message=FALSE, echo=FALSE}
+#this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
 #Cross-Validation Predictions
 #1) split n items into k fold of roughly equal size
 kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
@@ -541,6 +544,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes",
                                        round(perplexity(phat_NBCV, npf.all.clean$class2),3))
 
 ```
+
 Accuracy of Naive Bayes when using the first 15 principal components to reduce the dimensionality of the data. The highest accuracy is marked with red.
 
 ```{r,message=FALSE,echo=FALSE}
@@ -642,18 +646,18 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 ```
 
 4) k-NN
-K nearest neighbour is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
---- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
+K nearest neighbor is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
+
 ```{r, message=FALSE, echo=FALSE,eval=FALSE}
 
 set.seed(42)
 
 knn.acc <- c()
 
-train.X <- scale(npf_train_trimmed[,-16])
-valid.X <- scale(npf_valid_trimmed[,-16])
-train.Y <- npf_train_trimmed$class2
-valid.Y <- npf_valid_trimmed$class2
+train.X <- scale(npf_train[,-1])
+valid.X <- scale(npf_valid[,-1])
+train.Y <- npf_train$class2
+valid.Y <- npf_valid$class2
 j=0
 
 for (i in c(1, 5, 10, 15, 20, 50)){
@@ -664,81 +668,41 @@ for (i in c(1, 5, 10, 15, 20, 50)){
 }
 knn.acc
 ```
-When k = 15, the accuracy is highest so 15-NN and 1-NN (for comparison) is added
---- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
+When k = 5 (or 10), the accuracy is highest so 5-NN is added
 
 ```{r, message=FALSE, echo=FALSE,eval=FALSE}
 
 set.seed(42)
-
-train.X <- scale(npf_train_trimmed[,-16])
-valid.X <- scale(npf_valid_trimmed[,-16])
-train.Y <- npf_train_trimmed$class2
-valid.Y <- npf_valid_trimmed$class2
+k_sel <- c(5)
+train.X <- scale(npf_train[,-1])
+valid.X <- scale(npf_valid[,-1])
+train.Y <- npf_train$class2
+valid.Y <- npf_valid$class2
 
 #Train
-knn.Y_train <- knn(train.X, train.X, train.Y, k=15)
+knn.Y_train <- knn(train.X, train.X, train.Y, k=k_sel)
 knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
 knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
 #Validation
-knn.Y <- knn(train.X, valid.X, train.Y, k=15)
+knn.Y <- knn(train.X, valid.X, train.Y, k=k_sel)
 knn.Y_num <- ifelse(knn.Y=="event",1,0)
 knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
 
 #Cross-Validation predictions of the class
 knn.Y_CV <- c()
 for (i in 1:10){
-  train.X <- scale(npf_trimmed[split!=i,-16])
-  valid.X <- scale(npf_trimmed[split==i,-16])
-  train.Y <- npf_trimmed$class2[split!=i]
-  valid.Y <- npf_trimmed$class2[split==i]
+  train.X <- scale(npf.all.clean[split!=i,-1])
+  valid.X <- scale(npf.all.clean[split==i,-1])
+  train.Y <- npf.all.clean$class2[split!=i]
+  valid.Y <- npf.all.clean$class2[split==i]
 
-  knn.Y_CV[split==i] <- knn(train.X, valid.X, train.Y, k=15)
+  knn.Y_CV[split==i] <- knn(train.X, valid.X, train.Y, k=k_sel)
 }
 
 knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
 knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3)
 
-npf_results[nrow(npf_results)+1,] <- c("15-NN selected data", 
-                                       knn.acc_train, 
-                                       knn.acc_valid,
-                                       knn.acc_CV,
-                                       "","","")
-```
-
-
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
-set.seed(42)
-
-train.X <- scale(npf_train_trimmed[,-16])
-valid.X <- scale(npf_valid_trimmed[,-16])
-train.Y <- npf_train_trimmed$class2
-valid.Y <- npf_valid_trimmed$class2
-
-#Train
-knn.Y_train <- knn(train.X, train.X, train.Y, k=1)
-knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
-knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
-#Validation
-knn.Y <- knn(train.X, valid.X, train.Y, k=1)
-knn.Y_num <- ifelse(knn.Y=="event",1,0)
-knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
-
-#Cross-Validation predictions of the class
-knn.Y_CV <- c()
-for (i in 1:10){
-  train.X <- scale(npf_trimmed[split!=i,-16])
-  valid.X <- scale(npf_trimmed[split==i,-16])
-  train.Y <- npf_trimmed$class2[split!=i]
-  valid.Y <- npf_trimmed$class2[split==i]
-
-  knn.Y_CV[split==i] <- knn(train.X, valid.X, train.Y, k=1)
-}
-
-knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
-knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3)
-
-npf_results[nrow(npf_results)+1,] <- c("1-NN selected data", 
+npf_results[nrow(npf_results)+1,] <- c("5-NN", 
                                        knn.acc_train, 
                                        knn.acc_valid,
                                        knn.acc_CV,
@@ -754,27 +718,21 @@ npf_results
 ```
 
 
-##Some own testing...
-
-Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
-
 ```{r, message=FALSE, echo=FALSE,eval=FALSE}
+#Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
 
-split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+#split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
 
-perplexity_testi <- c()
+#perplexity_testi <- c()
 
-for (i in 1:10){
-  phat_testi <- c()
-  mod <- glm(class2 ~ ., npf_trimmed[split !=i, ], family = "binomial")
-  phat_testi<- predict(mod, newdata = npf_trimmed[split==i,], type = "response")
-  perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[split==i])
-}
+#for (i in 1:10){
+ # phat_testi <- c()
+  #mod <- glm(class2 ~ ., npf_trimmed[split !=i, ], family = "binomial")
+  #phat_testi<- predict(mod, newdata = npf_trimmed[split==i,], type = "response")
+  #perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[split==i])
+#}
 
-sum(perplexity_testi)/10
+#sum(perplexity_testi)/10
 
 ```
 
-
-
-End
