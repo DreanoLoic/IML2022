@@ -456,7 +456,7 @@ cv <- function(
 
 ```
 
-The models tested to the selected data in addition to decision tree, random forest and logistic regression with Lasso are
+The models tested in addition to the ones already tested are
 
 1) Dummy: 
 ---- write a description of the method and the code itself...
@@ -519,8 +519,7 @@ i <- which.max(acc_NB); points(i,acc_NB[i],pch=16,col="red")
 legend("bottomright",c("accuracy"),lty=c("solid"),pch=c(1))
 ```
 
-The highest accuracy is received when using 5 first PCs.
---- Cross-Validation is not yet updated to use PCs...
+The highest accuracy is received when using 5 first PCs so Naive Bayes when using the first 5 principal components to reduce the dimensionality is added to be one of the methods.
 
 ```{r, echo=FALSE}
 #selected number of PC
@@ -538,62 +537,68 @@ phat_NB_train <- predict(NB, df_train, type = "raw")[, 2]
 phat_NB <- predict(NB, df_valid, type = "raw")[, 2]
 
 #Cross-Validation
-#split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
-#phat_NBCV <- c()
-#for (i in 1:10){
-#  mod <- naiveBayes(class2 ~ ., npf.all.clean[split !=i, ], laplace = 1)
-#  phat_NBCV[split==i]<- predict(mod, npf.all.clean[split==i,], type = "raw")[,2]
-#}
+split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
+phat_NBCV <- c()
+for (i in 1:10){
+  #first, npf_hidden is removed from the pc's x matrix
+  df <- data.frame(pca_class2$x[-c(465:1429),1:PC, drop=FALSE])
+  #training data to be used in CV - class2 is added to the data
+  df_train <- data.frame(df[split != i,], class2 = npf.all.clean$class2[split != i])
+  #validation data to be used in CV
+  df_valid <- df[split ==i,]
+  
+  mod <- naiveBayes(class2 ~ ., df_train, laplace = 1)
+  phat_NBCV[split==i]<- predict(mod, df_valid, type = "raw")[,2]
+}
 
 npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA", 
                                        round(accuracy(phat_NB_train, class2_num_train),3), 
                                        round(accuracy(phat_NB, class2_num),3), 
-                                       "",
-                                       #round(accuracy(phat_NBCV, class2_num_all),3), 
+                                       round(accuracy(phat_NBCV, class2_num_all),3), 
                                        round(perplexity(phat_NB_train, npf_train$class2),3), 
-                                       round(perplexity(phat_NB, npf_valid$class2),3), 
-                                       "")
-                                       #round(perplexity(phat_NBCV, npf.all.clean$class2),3))
+                                       round(perplexity(phat_NB, npf_valid$class2),3),
+                                       round(perplexity(phat_NBCV, npf.all.clean$class2),3))
 
 ```
 
 3) Logistic regression
----- with or without interactions?
+--- with or without interactions? now it's without
 ```{r, echo=FALSE}
 library(glmnet)
 
-phat_LG <- function(npf_train_trimmed,
-npf_valid_trimmed,
+phat_LG <- function(npf_train,
+npf_valid,
 model = function(data) glm(class2 ~ ., data, family = "binomial"),
 pred = function(model, x) predict(model, newdata = x, type = "response")) {
-  m <- model(npf_train_trimmed)
-  pred(m, npf_valid_trimmed)
+  m <- model(npf_train)
+  pred(m, npf_valid)
 }
 
 #Train
-phat_LG_train <- phat_LG(npf_train_trimmed, npf_train_trimmed)
+phat_LG_train <- phat_LG(npf_train, npf_train)
 #Test
-phat_LG <- phat_LG(npf_train_trimmed, npf_valid_trimmed)
+phat_LG <- phat_LG(npf_train, npf_valid)
 
 #Cross-Validation
-split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
 phat_LGCV <- c()
 for (i in 1:10){
-  mod <- glm(class2 ~ ., npf_trimmed[split !=i, ], family = "binomial")
-  phat_LGCV[split==i]<- predict(mod, newdata = npf_trimmed[split==i,], type = "response")
+  mod <- glm(class2 ~ ., npf.all.clean[split !=i, ], family = "binomial")
+  phat_LGCV[split==i]<- predict(mod, newdata = npf.all.clean[split==i,], type = "response")
 }
 
-npf_results[nrow(npf_results)+1,] <- c("Logreg, selected data", 
+npf_results[nrow(npf_results)+1,] <- c("Logistic regression", 
                                        round(accuracy(phat_LG_train, class2_num_train),3), 
                                        round(accuracy(phat_LG, class2_num),3), 
                                        round(accuracy(phat_LGCV, class2_num_all),3), 
                                        round(perplexity(phat_LG_train, npf_train$class2),3), 
                                        round(perplexity(phat_LG, npf_valid$class2),3), 
-                                       round(perplexity(phat_LGCV, npf$class2),3))
+                                       round(perplexity(phat_LGCV, npf.all.clean$class2),3))
 ```
 
 4) k-NN
 K nearest neighbour is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
+--- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
 ```{r, echo=FALSE}
 library(class)
 set.seed(42)
@@ -615,6 +620,7 @@ for (i in c(1, 5, 10, 15, 20, 50)){
 knn.acc
 ```
 When k = 15, the accuracy is highest so 15-NN and 1-NN (for comparison) is added
+--- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
 
 ```{r, echo=FALSE}
 library(class)
@@ -696,8 +702,7 @@ npf_results[nrow(npf_results)+1,] <- c("1-NN selected data",
 ```
 
 5) SVM with radial basis kernel
-----This model was mentioned in lectures in relation to npf data example so it would be nice to add...
-
+----This model was mentioned in lectures in relation to npf data example so do we want to add it?
 
 Performance measures for the methods are:
 ```{r, echo=FALSE}
