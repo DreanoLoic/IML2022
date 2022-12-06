@@ -28,14 +28,15 @@ knitr::kable(df1, digits = 3)
 # str(npf)
 ```
 
-The features include a lot of daily measurements taken in Hyytiälä forestry field station. Some of the features like temperature T and CO2 are measured in different heights - the height indicated in the name of the feature, like T84.mean is the mean temperature at 8.4 meters above the mast base. 
+The features include a lot of daily measurements taken in Hyytiälä forestry field station. Some of the features like temperature T and CO2 are measured in different heights. The height is indicated in the name of the feature, for example, T84.mean is the mean temperature at 8.4 meters above the mast base. 
 
 ## Preprocessing data
 
-The summary of first 10 features in training data is:
+The summary of first four features in training data is:
+--- I changed this to be the 4 first because only they are needed to do the next steps of data cleaning. 
 
 ```{r, echo=FALSE}
-summary(npf[,1:10])
+summary(npf[,1:4])
 # check that there is no variable with sd = 0 and remove them (only work for numercical or factor variable)
 # npf.var = npf[, -which(apply(npf, 2, sd) == 0)]
 # same goal but based on the length of the result of the unique function()
@@ -77,9 +78,11 @@ colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub("
 corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
 ```
 
+As we can see, there are a lot of correlated variables which can cause problems when using machine learning methods. 
+--- I think we should explain more deeply what kind of problems...
 
 The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
----- I GET A WARNING MESSAGE "Error: object 'no' not found"
+
 ```{r,clean based on correlation, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
 elimcor_sansY<-function(X,s=0.80){
@@ -148,12 +151,13 @@ df2$npf_test = dim(npf_hidden)
 
 knitr::kable(df2, digits = 3)
 ```
+--- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
 
 ##Performance measures
 To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity a rescaled variant of log-likelihood. If perplexity = 1 the classifier predicts always the probability of an observation to an actual class. Perplexity = 2 corresponds to coin flipping.
 
 For Random Forest perplexity is not calculated but instead ROC curves are looked at.
----- Did we agree on this? :)
+---- Did we agree on this? :) ROC should still be added to code below
 
 Observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
 
@@ -519,7 +523,7 @@ i <- which.max(acc_NB); points(i,acc_NB[i],pch=16,col="red")
 legend("bottomright",c("accuracy"),lty=c("solid"),pch=c(1))
 ```
 
-The highest accuracy is received when using 5 first PCs so Naive Bayes when using the first 5 principal components to reduce the dimensionality is added to be one of the methods.
+The highest accuracy is received when using 5 first PCs so this is added to be one of the possible methods.
 
 ```{r, echo=FALSE}
 #selected number of PC
