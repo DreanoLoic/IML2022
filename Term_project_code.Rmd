@@ -8,15 +8,26 @@ output:
   word_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE,warning=FALSE}
+library(knitr)
+library(ggplot2)
+library(tibble)
+library(class)
+library(glmnet)
+library(e1071)
+library(ggfortify)
+library(randomForest)
+library(tree)
+library(glmnet)
+library(corrplot)
+opts_chunk$set(echo = TRUE)
 ```
-##Description of data
+
+## Description of data
 
 The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
 
-```{r, echo=FALSE}
-library(tibble)
+```{r, echo=FALSE,message=F,warning=FALSE}
 npf <- read.csv("npf_train.csv")
 npf_hidden <- read.csv("npf_test_hidden.csv")
 
@@ -24,7 +35,7 @@ df1=data_frame(" "=c("Measurements","Variables"))
 df1$npf_train = dim(npf)
 df1$npf_test = dim(npf_hidden)
 
-knitr::kable(df1, digits = 3)
+kable(df1, digits = 3, caption = "Summary of the dataset")
 # str(npf)
 ```
 
@@ -35,7 +46,7 @@ The features include a lot of daily measurements taken in Hyytiälä forestry fi
 The summary of first four features in training data is:
 --- I changed this to be the 4 first because only they are needed to do the next steps of data cleaning. 
 
-```{r, echo=FALSE}
+```{r, message=FALSE,echo=FALSE}
 summary(npf[,1:4])
 # check that there is no variable with sd = 0 and remove them (only work for numercical or factor variable)
 # npf.var = npf[, -which(apply(npf, 2, sd) == 0)]
@@ -49,7 +60,7 @@ The column "date" was set to be the row names. Columns "id", "date" and "partlyb
 
 A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to "class4". Variable "class4" indicates the type of the event if it has happened, values "Ia", "Ib" or "II", or "nonevent" if no event has happened during the day. 
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 npf.var$class2 <- factor("event", levels = c("nonevent", "event"))
 npf.var$class2[npf$class4 =="nonevent"] <- "nonevent"
 # reodering of npf.var to have the classes column at the beginning (easier to remove them after)
@@ -62,20 +73,24 @@ The task is to build a classifier which divides observations into two classes: "
 
 Because the data includes same measurements at different heights it is expected that there are correlation between variables. First, the correlations between different mean values are investigated:
 
-```{r, echo=FALSE,fig.align="center"}
-library(corrplot)
+```{r, message=FALSE, echo=FALSE,fig.align="center"}
+
 cm <- cor(npf.var[, endsWith(colnames(npf.var), ".mean")])
 # Remove ".mean" from variable names
 colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
-corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
+corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black",
+          title="Correlation matrix of mean variables", 
+     mar=c(0,0,1,0))
 
 ```
 The same picture for different standard deviation values:
-```{r, echo=FALSE,fig.align="center"}
+```{r, message=FALSE, echo=FALSE,fig.align="center"}
 # the correlation for the standard deviation variable 
 cm_sd <- cor(npf.var[, endsWith(colnames(npf.var), ".std")])
 colnames(cm_sd) <- rownames(cm_sd) <- sapply(colnames(cm_sd), function(s) gsub(".std","",s))
-corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black")
+corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
+                   title="Correlation matrix of std variables", 
+     mar=c(0,0,1,0))
 ```
 
 As we can see, there are a lot of correlated variables which can cause problems when using machine learning methods. 
@@ -83,7 +98,7 @@ As we can see, there are a lot of correlated variables which can cause problems 
 
 The variables which have an absolute correlation greater than 0.8 with some other variable is removed from the data. The correlations after cleaning are:
 
-```{r,clean based on correlation, echo=FALSE}
+```{r, clean based on correlation,message=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
 elimcor_sansY<-function(X,s=0.80){
   #X Matrix of variable to cluster 
@@ -133,23 +148,40 @@ npf.corr= npf.var[,-c(1,2)]
 
 # ind.corr.90 = elimcor_sansY(npf.corr,0.90)$possetap
 ind.corr.80 = elimcor_sansY(npf.corr,0.80)$possetap
-
+var80 = colnames(npf.corr)[ind.corr.80]
 # npf.clean = npf.corr[ind.corr.90] # 34 variables
-npf.clean = npf.corr[ind.corr.80] # 26 variables 
-no
+
+npf.clean = npf.corr[var80] # 26 variables 
+npf.test.clean = npf_hidden[var80]
 
 cm.2 <- cor(npf.clean[, endsWith(colnames(npf.clean), ".mean")])
 colnames(cm.2) <- rownames(cm.2) <- sapply(colnames(cm.2), function(s) gsub(".mean","",s))
 corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
          addCoef.col ='black', order = 'FPC', diag=FALSE, 
-         tl.cex = 0.5, tl.col = "black",number.cex = 0.5)
+         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+         title="Correlation matrix of mean variables for the clean dataset", 
+         mar=c(0,0,1,0))
 # corrplot(cm.2, order = "FPC", tl.cex=0.5, tl.col= "black")
+cm.2_sd <- cor(npf.clean[, endsWith(colnames(npf.clean), ".std")])
+colnames(cm.2_sd) <- rownames(cm.2_sd) <- sapply(colnames(cm.2_sd), function(s) gsub(".std","",s))
+corrplot(cm.2_sd, method = 'circle', type = 'upper', insig='blank',
+         addCoef.col ='black', order = 'FPC', diag=FALSE, 
+         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+         title="Correlation matrix of std variables for the clean dataset", 
+         mar=c(0,0,1,0))
 
 df2=data_frame(" "=c("Measurements","Variables"))
 df2$npf_train = dim(npf.clean)
-df2$npf_test = dim(npf_hidden)
+df2$npf_test = dim(npf.test.clean)
 
-knitr::kable(df2, digits = 3)
+df3 = data.frame(var80[1:7],var80[8:14],var80[15:21],c(var80[21:26],""))
+colnames(df3)= rep("",4)
+
+kable(df3,caption = "List of kept variables")
+
+kable(df2, digits = 3,caption = "Summary of clean dataset")
+
+
 ```
 --- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
 
@@ -167,11 +199,11 @@ Performance measures are calculated using validation method: the training data i
 
 The alternative response "class4" is removed from the data so that it doesn't disturb the fitting.
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 # which training set ? 
 npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
 # npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
-# npf = npf.var[,-1] # Raw data for class2
+# npf.all.full = npf.var[,-1] # Raw data for class2
 # npf = npf.var[,-2] # Raw data for class4
 
 set.seed(42)
@@ -200,8 +232,8 @@ To find the most important variables logistic regression with Lasso, decision tr
 
 1) Logistic regression with Lasso, lambda selected by Cross-Validation
 --- this code is updated to use npf.all.clean data in CV
-```{r, echo=FALSE}
-library(glmnet)
+```{r, message=FALSE, echo=FALSE}
+
 set.seed(42)
 x <- model.matrix(class2 ~., npf_train)[,-1]
 y <- npf_train$class2
@@ -237,44 +269,44 @@ npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso CV",
 ```
 
 The selected lambda is
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 cv.lambda
 ```
 
 and the coefficients are
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 coef(m.lassoCV)
 ```
 
 2) A "normal" decision tree selects the following variables with the misclassification as follows
 
-```{r, echo=FALSE}
-library(tree)
+```{r, message=FALSE, echo=FALSE}
+
 set.seed(42)
 tree.npf <- tree(class2~., npf_train)
 summary(tree.npf)
 ```
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 plot(tree.npf)
 text(tree.npf, pretty = 0, cex=0.6)
 ```
 Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 tree.pred <- predict(tree.npf, npf_valid, type = "class")
 table(tree.pred, npf_valid$class2)
 ```
 Predicted classes vs. actual classes for training data:
 --- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 tree.pred_train <- predict(tree.npf, npf_train, type = "class")
 table(tree.pred_train, npf_train$class2)
 ```
 The accuracies are respectively
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 acc_tree <- (113+107)/232
 acc_tree_train <- (104+94)/232
 npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
@@ -285,8 +317,8 @@ round(acc_tree_train,3)
 3) Random Forest with 10 variables (square root of the number of features) used in each run
 
 Confusion matrix for training data
-```{r, echo=FALSE}
-library(randomForest)
+```{r, message=FALSE, echo=FALSE}
+
 set.seed(42)
 rf.npf <- randomForest(class2~., data = npf_train, mtry = 10, importance = TRUE)
 rf.pred_train <- predict(rf.npf, newdata = npf_train)
@@ -294,12 +326,12 @@ table(rf.pred_train, npf_train$class2)
 ```
 
 Confusion matrix for validation
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 rf.pred <- predict(rf.npf, newdata = npf_valid)
 table(rf.pred, npf_valid$class2)
 ```
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 acc_tree_train <- (115+117)/232
 acc_tree <- (100+98)/232
 npf_results[nrow(npf_results)+1,] <- c("Random Forest", round(acc_tree_train, 3), round(acc_tree,3), "", "", "","")
@@ -308,27 +340,29 @@ acc_tree
 ```
 The importance of the variables are:
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 
 4) PCA
 PCA is used to the original training data (npf_train.csv with 464 observations) together with the original testing data (npf_hidden.csv) where the variables are centered to have zero mean and scaled to have standard deviation one. The responses variables are removed from the original training data because we are using unsupervised learning method. The first two principal components are:
 
-```{r, eval=FALSE,echo=FALSE}
-library(ggfortify)
+```{r, message=FALSE, eval=TRUE,echo=FALSE}
 npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
 #the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
 pca.npf <- prcomp(npf_pca, scale = TRUE )
 #if we get to know class4 in npf_hidden, we can use colouring according to class4
 #autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+  ggtitle("PCA of the variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 ```
 
 ---Can we conclude from the picture above if there are any significant outliers?
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
-```{r, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
@@ -337,26 +371,36 @@ plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of
 
 ```
 
-```{r, eval=FALSE,echo=FALSE}
+```{r, message=FALSE,echo=FALSE}
 #The loadings of 5 first principal components are
 #pca.npf$rotation[,1:5]
 ```
 
 PCA is also done for the data where variables with high correleation to other variables are removed (cleaned data). The first two principal components are:
 
-```{r, eval=FALSE,echo=FALSE}
+```{r, message=FALSE,echo=FALSE}
 columns <- colnames(npf.clean)
 npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
 npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
 pca.npf.clean <- prcomp(npf_pca_clean, scale = TRUE )
 #if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
 #autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
+  theme_bw()+
+  ggtitle("PCA of the clean variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
+
+#### Do we want to draw the pca using validation set to train or are we using it just to compare performance ?? 
+#### I am just a bit confused between the sets :/
+pca.npf.clean <- prcomp(npf.all.clean[,-1], scale = TRUE )
+autoplot(pca.npf.clean,data=npf.all.clean,loadings=TRUE,loadings.label=TRUE,colour='class2')+theme_bw()
+
 ```
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
 
-```{r, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf.clean$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
@@ -370,7 +414,7 @@ According to the results above at least 15 first principal components should be 
 
 The performance of the classifiers investigated so far are:
 
-```{r, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
 npf_results
 ```
 
@@ -410,7 +454,7 @@ Because the measures in different heights/levels are highly correlated, we selec
 
 We select the following variables to be used in models:
 ---- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
   #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
 npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
@@ -421,8 +465,7 @@ selection
 
 Let's check if there are any correlation left:
 
-```{r, echo=FALSE}
-library(corrplot)
+```{r, message=FALSE, echo=FALSE}
 cm <- cor(npf_trimmed[,-16])
 colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
 corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
@@ -432,7 +475,7 @@ corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 ##Model selection
 --- CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications to functions...
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 #Cross-Validation Predictions
 #1) split n items into k fold of roughly equal size
 kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
@@ -466,9 +509,8 @@ The models tested in addition to the ones already tested are
 ---- write a description of the method and the code itself...
 
 2) Naive Bayes
-```{r, echo=FALSE}
-library(e1071)
- 
+```{r, message=FALSE, echo=FALSE}
+
 phat_NB <- function(npf_train,
 npf_valid,
 model = function(data) naiveBayes(class2 ~ ., data, laplace = 1),
@@ -501,7 +543,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes",
 ```
 Accuracy of Naive Bayes when using the first 15 principal components to reduce the dimensionality of the data. The highest accuracy is marked with red.
 
-```{r }
+```{r,message=FALSE,echo=FALSE}
 #perfoming PCA to the whole, cleaned data (npf_train.csv and npf_hidden.csv cleaned from correlated variables) 
 pca_class2 <- prcomp(npf_pca_clean, scale = TRUE)
 
@@ -525,7 +567,7 @@ legend("bottomright",c("accuracy"),lty=c("solid"),pch=c(1))
 
 The highest accuracy is received when using 5 first PCs so this is added to be one of the possible methods.
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 #selected number of PC
 PC <- c(5)
 # accuracy and perplexity of the selected PC is added to the result table
@@ -567,8 +609,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 
 3) Logistic regression
 --- with or without interactions? now it's without
-```{r, echo=FALSE}
-library(glmnet)
+```{r, message=FALSE, echo=FALSE}
 
 phat_LG <- function(npf_train,
 npf_valid,
@@ -603,8 +644,8 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 4) k-NN
 K nearest neighbour is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
 --- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
-```{r, echo=FALSE}
-library(class)
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
+
 set.seed(42)
 
 knn.acc <- c()
@@ -626,8 +667,8 @@ knn.acc
 When k = 15, the accuracy is highest so 15-NN and 1-NN (for comparison) is added
 --- this is not updated: the data that is used is still the old "trimmed", not the cleaned data
 
-```{r, echo=FALSE}
-library(class)
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
+
 set.seed(42)
 
 train.X <- scale(npf_train_trimmed[,-16])
@@ -666,8 +707,7 @@ npf_results[nrow(npf_results)+1,] <- c("15-NN selected data",
 ```
 
 
-```{r, echo=FALSE}
-library(class)
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
 set.seed(42)
 
 train.X <- scale(npf_train_trimmed[,-16])
@@ -709,7 +749,7 @@ npf_results[nrow(npf_results)+1,] <- c("1-NN selected data",
 ----This model was mentioned in lectures in relation to npf data example so do we want to add it?
 
 Performance measures for the methods are:
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE}
 npf_results
 ```
 
@@ -718,7 +758,7 @@ npf_results
 
 Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
 
-```{r, echo=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=FALSE}
 
 split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
 
