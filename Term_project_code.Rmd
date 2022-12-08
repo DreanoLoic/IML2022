@@ -187,7 +187,9 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 
 ```
---- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
+--- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA). 
+
+-- barplot ? 
 
 ## Performance measures
 
@@ -364,13 +366,12 @@ autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
 ---Can we conclude from the picture above if there are any significant outliers?
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=TRUE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
 plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained", ylim =c(0,1), type ="b")
 plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained", ylim =c(0,1), type ="b")
-
 ```
 
 ```{r, message=FALSE,echo=FALSE}
@@ -395,14 +396,14 @@ autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
 
 #### Do we want to draw the pca using validation set to train or are we using it just to compare performance ?? 
 #### I am just a bit confused between the sets :/
-pca.npf.clean <- prcomp(npf.all.clean[,-1], scale = TRUE )
-autoplot(pca.npf.clean,data=npf.all.clean,loadings=TRUE,loadings.label=TRUE,colour='class2')+theme_bw()
+# pca.npf.clean <- prcomp(npf.all.clean[,-1], scale = TRUE )
+# autoplot(pca.npf.clean,data=npf.all.clean,loadings=TRUE,loadings.label=TRUE,colour='class2')+theme_bw()
 
 ```
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
 
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=TRUE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf.clean$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
@@ -416,7 +417,7 @@ According to the results above at least 15 first principal components should be 
 
 The performance of the classifiers investigated so far are:
 
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=TRUE}
 npf_results
 ```
 
@@ -648,7 +649,7 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 4) k-NN
 K nearest neighbor is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
 
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=T}
 
 set.seed(42)
 
@@ -670,7 +671,7 @@ knn.acc
 ```
 When k = 5 (or 10), the accuracy is highest so 5-NN is added
 
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=T}
 
 set.seed(42)
 k_sel <- c(5)
@@ -718,7 +719,7 @@ npf_results
 ```
 
 
-```{r, message=FALSE, echo=FALSE,eval=FALSE}
+```{r, message=FALSE, echo=FALSE,eval=TRUE}
 #Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
 
 #split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
