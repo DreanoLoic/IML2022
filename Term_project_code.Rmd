@@ -100,7 +100,7 @@ The variables which have an absolute correlation greater than 0.8 with some othe
 --- Loic, can you write above a better description of what is done (I mean, how the code selects which one are left in the data and which one are removed?)
 
 The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables.
---- should we put the means and std in the same correlation matrix to see if there are correlation between them (and to save space)?
+--- should we put the means and std in the same correlation matrix to see if there are correlation between them and to save space?
 
 ```{r, clean based on correlation,message=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -187,9 +187,17 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 
 ```
---- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA). 
+--- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
+--- Is there any good "summary picture" we could use? I tried histograms but there are too many of them...
+```{r, message=FALSE, echo=FALSE}
+par(mfrow=c(3,3))
+for (i in (2:ncol(npf_train))){
+  hist(npf_train[,i])
+  #boxplot(pf_train[,i] ~class2, npf_train)
+}
 
--- barplot ? 
+```
+
 
 ## Performance measures
 
@@ -234,7 +242,9 @@ npf_results <- na.omit(npf_results)
 
 To find the most important variables logistic regression with Lasso, decision tree ("basic"), random forest and Principal Component Analysis (PCA) are used to cleaned data. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
 
-1) Logistic regression with Lasso, lambda selected by Cross-Validation
+1) Logistic regression with Lasso, lambda selected by Cross-Validation:
+
+Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. The lambda is
 
 ```{r, message=FALSE, echo=FALSE}
 
@@ -270,18 +280,15 @@ npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso CV",
                                        round(perplexity(phat_LGLCV_train, npf_train$class2),3), 
                                        round(perplexity(phat_LGLCV, npf_valid$class2),3), 
                                        round(perplexity(phat_LGLCV_CV, npf.all.clean$class2),3))
-```
-
-The selected lambda is
-```{r, message=FALSE, echo=FALSE}
 cv.lambda
 ```
 
-and the coefficients are
+The estimated coefficients are
 
 ```{r, message=FALSE, echo=FALSE}
 coef(m.lassoCV)
 ```
+As we can see, some of the variables have a zero coefficient meaning that Lasso has done variable selection.
 
 2) A "normal" decision tree selects the following variables with the misclassification as follows
 
@@ -423,7 +430,7 @@ npf_results
 
 ## Conclusions and feature selection
 
---- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection done here. !!!
+--- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection previously done here. !!!
 
 The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
 ---- Should we investigate diagnostic plots for log reg? Should be give weight to well performed classifiers when selecting the variables?
@@ -649,6 +656,7 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 4) k-NN
 K nearest neighbor is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on validation set for each of them are respectively
 
+
 ```{r, message=FALSE, echo=FALSE,eval=T}
 
 set.seed(42)
@@ -672,6 +680,7 @@ knn.acc
 When k = 5 (or 10), the accuracy is highest so 5-NN is added
 
 ```{r, message=FALSE, echo=FALSE,eval=T}
+
 
 set.seed(42)
 k_sel <- c(5)
@@ -710,8 +719,7 @@ npf_results[nrow(npf_results)+1,] <- c("5-NN",
                                        "","","")
 ```
 
-5) SVM with radial basis kernel
-----This model was mentioned in lectures in relation to npf data example so do we want to add it?
+
 
 Performance measures for the methods are:
 ```{r, message=FALSE, echo=FALSE}
