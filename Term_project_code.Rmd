@@ -175,20 +175,20 @@ corrplot(cm.2_sd, method = 'circle', type = 'upper', insig='blank',
          mar=c(0,0,1,0))
 
 #Option 2
-# corrplot.mixed(cm.2, order = 'FPC', 
-#          tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-#          title="Correlation matrix of mean variables for the clean dataset", 
-#          mar=c(0,0,1,0))
-# corrplot.mixed(cm.2_sd, order = 'FPC', 
-#          tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-#          title="Correlation matrix of std variables for the clean dataset", 
-#          mar=c(0,0,1,0))
+corrplot.mixed(cm.2, order = 'FPC',
+         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+         title="Correlation matrix of mean variables for the clean dataset",
+         mar=c(0,0,1,0))
+corrplot.mixed(cm.2_sd, order = 'FPC',
+         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+         title="Correlation matrix of std variables for the clean dataset",
+         mar=c(0,0,1,0))
 
 df2=data_frame(" "=c("Measurements","Variables"))
 df2$npf_train = dim(npf.clean)
 df2$npf_test = dim(npf.test.clean)
 
-#Corrplot of all clean 
+#Option 3  
 cm_3 <- cor(npf.clean)
 corrplot(cm_3, method = 'circle', type = 'upper', insig='blank',
          order = 'FPC', diag=FALSE, 
@@ -377,23 +377,45 @@ Confusion matrix for training data
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 set.seed(42)
-rf.npf <- randomForest(class2~., data = npf_train, mtry = 5, importance = TRUE)
-rf.pred_train <- predict(rf.npf, newdata = npf_train)
-table(rf.pred_train, npf_train$class2)
+npf_train.rf = npf_train
+npf_train.rf$class2=class2_num_train
+rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 5, importance = TRUE)
+phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
+
+table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2)
 ```
 
 Confusion matrix for validation
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
-rf.pred <- predict(rf.npf, newdata = npf_valid)
-table(rf.pred, npf_valid$class2)
+phat_RF <- predict(rf.npf, newdata = npf_valid)
+
+table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2)
 ```
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
-acc_tree_train <- (115+117)/232
-acc_tree <- (100+98)/232
-npf_results[nrow(npf_results)+1,] <- c("Random Forest", round(acc_tree_train, 3), round(acc_tree,3), "", "", "","")
-acc_tree_train
-acc_tree
+#Cross-Validation
+# split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
+split = split.CV(npf.all.clean,10)
+phat_RF_CV <- c()
+for (i in 1:10){
+  ind.test = split[[i]]
+  ind.all = unlist(split)
+  ind.train = ind.all[!ind.all %in% ind.test]
+  x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+  y <- npf.all.clean$class2[ind.train]
+  x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
+  mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+  phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+}
+
+#Performance measures into the table
+npf_results[nrow(npf_results)+1,] <- c("Random Forest", 
+                                       round(accuracy(phat_RF_train, class2_num_train),3), 
+                                       round(accuracy(phat_RF, class2_num),3), 
+                                       round(accuracy(phat_RF_CV, class2_num_all),3), 
+                                       round(perplexity(phat_RF_train, npf_train$class2),3), 
+                                       round(perplexity(phat_RF, npf_valid$class2),3), 
+                                       round(perplexity(phat_RF_CV, npf.all.clean$class2),3))
 ```
 The importance of the variables are:
 
@@ -401,77 +423,6 @@ The importance of the variables are:
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-set.seed(54)
-
-
-
-RF.reg.CV= function(X,nm.cl,iteration,nb.grp,mtry,ntree){
-  ###iteration : nombre de fois que la CV est realiser	
-  ###nb.grp :  nbr de fold pour la CV
-  ###X : matrice de descripteurs 
-  ###Y : vecteur qui contient la variable a predire
-  ###nm.cl :  vecteur de classe 
-  
-  ###Pouc chq CV, on va calculer le taux de bien predit sur l'ech a predire.
-  ###Ces taux seront stockes dans le vecteur res.tx
-  
-  res.tx = NULL
-  CV.perf = NULL
-  for(it in 1:iteration){
-    print(it)
-    Tx.good=0
-    Yobs = NULL
-    Ypred=NULL
-    # list of the sub-samples
-    ech.list = split.CV(Mat = X,nbG = nb.grp)
-    for(i in 1:nb.grp){
-      #choisi les nb.grp-1 echantillons pour l apprentissage
-      num.ech=seq(1,nb.grp)[-i]
-      list.mol = NULL
-      for (ind in num.ech){
-        list.mol=c(list.mol, ech.list[[ind]])     ###training set
-      }
-      # recuperer les descripteurs
-      X1 = X[list.mol,]
-      Y = as.numeric(nm.cl[list.mol])
-      ###creation de la matrice a predire
-      Matpred = cbind(X1,Y)
-      colnames(Matpred) = c(colnames(X1), "pred")
-      #calcul du modele
-      modele=randomForest(pred ~ ., data = Matpred,mtry=mtry,ntree=ntree)
-      ###creation of validation set
-      new.data=X[ech.list[[i]],]
-      Ypred = append(Ypred,predict(modele,newdata=new.data))
-      Yobs = append(Yobs,nm.cl[ech.list[[i]]])
-    }   ###fin de la boucle de cross-validation
-    #compute well-predicted rate for the CV test set
-    #Tx.good = sum(diag(table(Ypred,Yobs)))/length(Ypred)
-    #res.tx = c(res.tx,Tx.good)
-    
-    correl = cor(Yobs,Ypred)
-    R2 = summary(lm(Ypred~Yobs))$r.squared
-    perf  = cbind(correl,R2)
-    CV.perf = rbind(CV.perf,perf)
-  }
-  return(apply(CV.perf,2,mean))
-}
-npf_train$class2=class2_num_train
-rf.npf <- randomForest(class2~., data = npf_train, mtry = 5, importance = TRUE)
-rf.npf2 <- randomForest(class2~., data = npf_train, mtry = 5, importance = TRUE)
-RF.CV = RF.reg.CV(X= npf_train[,-1],nm.cl = class2_num_train,iteration = 20,nb.grp = 5,mtry = 5,ntree = 50)
-split = split.CV(npf.all.clean,10)
-phat_NBCV <- c()
-for (i in 1:10){   
-  ind.test = split[[i]]
-  ind.all = unlist(split) 
-  ind.train = ind.all[!ind.all %in% ind.test]
-  mod <- naiveBayes(class2 ~ ., npf.all.clean[ind.train, ], laplace = 1)
-  phat_NBCV[ind.test]<- predict(mod, npf.all.clean[ind.test,], type = "raw")[,2]
-}
-
-
-```
 
 
 4) PCA
@@ -487,6 +438,17 @@ autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
   ggtitle("PCA of the variables")+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
+## Option 2 with color -> info training and validation sets seems to cover the same space
+npf_pca <- rbind(npf.var[,-c(1)],  cbind("class2"=NA,npf_hidden[,-c(1:4)]))
+
+#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
+pca.npf <- prcomp(npf_pca[,-1], scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4
+#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+  ggtitle("PCA of the variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
 ```
 
 ---Can we conclude from the picture above if there are any significant outliers?
@@ -520,11 +482,18 @@ autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 
-#### Do we want to draw the pca using validation set to train or are we using it just to compare performance ?? 
-#### I am just a bit confused between the sets :/
-# pca.npf.clean <- prcomp(npf.all.clean[,-1], scale = TRUE )
-# autoplot(pca.npf.clean,data=npf.all.clean,loadings=TRUE,loadings.label=TRUE,colour='class2')+theme_bw()
-
+## Option 2 with color -> info training and validation sets seems to cover the same space
+columns <- colnames(npf.clean)
+npf_hidden_clean <- cbind("class2"=NA, npf_hidden[,colnames(npf_hidden) %in% columns])
+npf_pca_clean <- rbind(npf.all.clean,npf_hidden_clean)
+pca.npf.clean <- prcomp(npf_pca_clean[,-1], scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
+#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings.label=TRUE)+
+  theme_bw()+
+  ggtitle("PCA of the clean variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
 ```
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
