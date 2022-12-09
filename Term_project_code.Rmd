@@ -20,6 +20,7 @@ library(randomForest)
 library(tree)
 library(glmnet)
 library(corrplot)
+library(rstatix)
 opts_chunk$set(echo = TRUE)
 ```
 
@@ -210,7 +211,8 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 ```
 --- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
 --- Is there any good "summary picture" we could use? I tried histograms but there are too many of them...
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
+par(mar = c(4, 4, .1, .1))
 # which training set ? 
 npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
 # npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
@@ -222,9 +224,20 @@ train_id <- sample(1:nrow(npf), 232)
 npf_train <- npf.all.clean[train_id,]
 npf_valid <- npf.all.clean[-train_id,]
 
-par(mfrow=c(3,3))
-for (i in (2:ncol(npf_train))){
-  hist(npf_train[,i])
+
+for (i in colnames(npf_train[,-1])){
+  
+    # hist(npf_train[,i],main = i,col = npf_train$class2)
+  plot(ggplot(npf_train,aes(x=npf_train[,i],fill=npf_train$class2,color=npf_train$class2))+
+    geom_histogram(position="identity",alpha=0.5)+
+    xlab(i)+
+    theme_bw()+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0)+ 
+    theme(legend.position = "right")+
+      labs(fill="Class2:",color="Class2:")+
+        ggtitle(i))
+      
   #boxplot(pf_train[,i] ~class2, npf_train)
 }
 
@@ -332,6 +345,7 @@ cv.lambda
 The estimated coefficients are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
+m.lassoCV %>% tidy() %>% kable(digits = 3)
 coef(m.lassoCV)
 ```
 As we can see, some of the variables have a zero coefficient meaning that Lasso has done variable selection.
@@ -342,7 +356,8 @@ As we can see, some of the variables have a zero coefficient meaning that Lasso 
 
 set.seed(42)
 tree.npf <- tree(class2~., npf_train)
-summary(tree.npf)
+summary(tree.npf) 
+kable(summary(tree.npf)$used,col.names = "Variables")
 ```
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -353,14 +368,14 @@ Accuracy of the tree can be calculated from the confusion matrix. Predicted clas
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 tree.pred <- predict(tree.npf, npf_valid, type = "class")
-table(tree.pred, npf_valid$class2)
+kable(table(tree.pred, npf_valid$class2))
 ```
 Predicted classes vs. actual classes for training data:
 --- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 tree.pred_train <- predict(tree.npf, npf_train, type = "class")
-table(tree.pred_train, npf_train$class2)
+kable(table(tree.pred_train, npf_train$class2))
 ```
 The accuracies are respectively
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -382,14 +397,14 @@ npf_train.rf$class2=class2_num_train
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 5, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
-table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2)
+kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
 
 Confusion matrix for validation
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 phat_RF <- predict(rf.npf, newdata = npf_valid)
 
-table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2)
+kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -429,16 +444,7 @@ varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 PCA is used to the original training data (npf_train.csv with 464 observations) together with the original testing data (npf_hidden.csv) where the variables are centered to have zero mean and scaled to have standard deviation one. The responses variables are removed from the original training data because we are using unsupervised learning method. The first two principal components are:
 
 ```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
-npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
-#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
-pca.npf <- prcomp(npf_pca, scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4
-#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
-  ggtitle("PCA of the variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
-## Option 2 with color -> info training and validation sets seems to cover the same space
+## Option 1 with color -> info training and validation sets seems to cover the same space
 npf_pca <- rbind(npf.var[,-c(1)],  cbind("class2"=NA,npf_hidden[,-c(1:4)]))
 
 #the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
@@ -449,6 +455,17 @@ autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)
   ggtitle("PCA of the variables")+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
+## Option 2 
+npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
+#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
+pca.npf <- prcomp(npf_pca, scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4
+#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+  ggtitle("PCA of the variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
+
 ```
 
 ---Can we conclude from the picture above if there are any significant outliers?
@@ -470,6 +487,20 @@ plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of
 PCA is also done for the data where variables with high correleation to other variables are removed (cleaned data). The first two principal components are:
 
 ```{r, message=FALSE,echo=FALSE}
+
+## Option 1 with color -> info training and validation sets seems to cover the same space
+columns <- colnames(npf.clean)
+npf_hidden_clean <- cbind("class2"=NA, npf_hidden[,colnames(npf_hidden) %in% columns])
+npf_pca_clean <- rbind(npf.all.clean,npf_hidden_clean)
+pca.npf.clean <- prcomp(npf_pca_clean[,-1], scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
+#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings.label=TRUE)+
+  theme_bw()+
+  ggtitle("PCA of the clean variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
+## Option 2 
 columns <- colnames(npf.clean)
 npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
 npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
@@ -482,18 +513,7 @@ autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 
-## Option 2 with color -> info training and validation sets seems to cover the same space
-columns <- colnames(npf.clean)
-npf_hidden_clean <- cbind("class2"=NA, npf_hidden[,colnames(npf_hidden) %in% columns])
-npf_pca_clean <- rbind(npf.all.clean,npf_hidden_clean)
-pca.npf.clean <- prcomp(npf_pca_clean[,-1], scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
-#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings.label=TRUE)+
-  theme_bw()+
-  ggtitle("PCA of the clean variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
+
 ```
 
 The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
@@ -513,7 +533,7 @@ According to the results above at least 15 first principal components should be 
 The performance of the classifiers investigated so far are:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-npf_results
+kable(npf_results)
 ```
 
 ## Conclusions and feature selection
@@ -824,7 +844,7 @@ npf_results[nrow(npf_results)+1,] <- c("5-NN",
 
 Performance measures for the methods are:
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
-npf_results
+kable(npf_results)
 ```
 
 
