@@ -766,7 +766,14 @@ According to the performance comparison we select logistic regression with Lasso
 
 --- should we repeat the performance of the selected model here?
 
+## Challenge 11.12.2022
+
+--- CV Accuracy of the selected method should be reported as well as predicted class and probabilities to observations in npf_hidden
+--- we need to convert class "event" to one of the types Ia, Ib or II - we should use the one that has the highest probability in the data (npf_train.csv).
+
 ## Annex: Histograms of variables
+
+After removing variables with high correlation to other variables 26 variables are left in the data. The histograms give an overview of the values of the variables:
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
 par(mar = c(4, 4, .1, .1))
@@ -798,6 +805,7 @@ npf_valid <- npf.all.clean[-train_id,]
 
 
 ```
+
 
 ## END
 
