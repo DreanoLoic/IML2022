@@ -22,6 +22,8 @@ library(glmnet)
 library(corrplot)
 library(rstatix)
 opts_chunk$set(echo = TRUE)
+#Value of repetion of CV
+CV.rep=100
 ```
 
 ## Description of data
@@ -399,27 +401,33 @@ phat_LGLCV <- predict(m.lassoCV, newx = x.test, type = "response")
 
 #Cross-Validation
 # split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
-split = split.CV(npf.all.clean,10)
-phat_LGLCV_CV <- c()
-for (i in 1:10){
-  ind.test = split[[i]]
-  ind.all = unlist(split)
-  ind.train = ind.all[!ind.all %in% ind.test]
-  x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
-  y <- npf.all.clean$class2[ind.train]
-  x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
-  mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
-  phat_LGLCV_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+l.acc.LGLCV = NULL
+l.perp.LGLCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_LGLCV_CV <- c()
+  for (i in 1:10){
+    ind.test = split[[i]]
+    ind.all = unlist(split)
+    ind.train = ind.all[!ind.all %in% ind.test]
+    x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+    y <- npf.all.clean$class2[ind.train]
+    x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
+    mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+    phat_LGLCV_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+  }
+  l.acc.LGLCV=c(l.acc.LGLCV,accuracy(phat_LGLCV_CV, class2_num_all))
+  l.perp.LGLCV=c(l.perp.LGLCV,perplexity(phat_LGLCV_CV, npf.all.clean$class2))
 }
 
 #Performance measures into the table
 npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso", 
                                        round(accuracy(phat_LGLCV_train, class2_num_train),3), 
                                        round(accuracy(phat_LGLCV, class2_num),3), 
-                                       round(accuracy(phat_LGLCV_CV, class2_num_all),3), 
+                                       round(mean(l.acc.LGLCV),3), 
                                        round(perplexity(phat_LGLCV_train, npf_train$class2),3), 
                                        round(perplexity(phat_LGLCV, npf_valid$class2),3), 
-                                       round(perplexity(phat_LGLCV_CV, npf.all.clean$class2),3))
+                                       round(mean(l.perp.LGLCV),3))
 round(cv.lambda,3)
 ```
 
@@ -465,27 +473,32 @@ There are 19 observations predicted to be nonevent even though the event has occ
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
 # split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
-split = split.CV(npf.all.clean,10)
-phat_RF_CV <- c()
-for (i in 1:10){
-  ind.test = split[[i]]
-  ind.all = unlist(split)
-  ind.train = ind.all[!ind.all %in% ind.test]
-  x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
-  y <- npf.all.clean$class2[ind.train]
-  x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
-  mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
-  phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+l.acc.RF_CV = NULL
+l.perp.RF_CV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_RF_CV <- c()
+  for (i in 1:10){
+    ind.test = split[[i]]
+    ind.all = unlist(split)
+    ind.train = ind.all[!ind.all %in% ind.test]
+    x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+    y <- npf.all.clean$class2[ind.train]
+    x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
+    mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+    phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+  }
+  l.acc.RF_CV = c(l.acc.RF_CV,accuracy(phat_RF_CV, class2_num_all))
+  l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
 }
-
 #Performance measures into the table
 npf_results[nrow(npf_results)+1,] <- c("Random Forest", 
                                        round(accuracy(phat_RF_train, class2_num_train),3), 
                                        round(accuracy(phat_RF, class2_num),3), 
-                                       round(accuracy(phat_RF_CV, class2_num_all),3), 
+                                       round(mean(l.acc.RF_CV),3), 
                                        round(perplexity(phat_RF_train, npf_train$class2),3), 
                                        round(perplexity(phat_RF, npf_valid$class2),3), 
-                                       round(perplexity(phat_RF_CV, npf.all.clean$class2),3))
+                                       round(mean(l.perp.RF_CV),3))
 ```
 
 The importance of variables are:
@@ -530,23 +543,29 @@ phat_NB <- phat_NB(npf_train, npf_valid)
 
 #Cross-Validation
 # split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
-split = split.CV(npf.all.clean,10)
-phat_NBCV <- c()
-for (i in 1:10){   
-  ind.test = split[[i]]
-  ind.all = unlist(split) 
-  ind.train = ind.all[!ind.all %in% ind.test]
-  mod <- naiveBayes(class2 ~ ., npf.all.clean[ind.train, ], laplace = 1)
-  phat_NBCV[ind.test]<- predict(mod, npf.all.clean[ind.test,], type = "raw")[,2]
+l.acc.NBCV = NULL
+l.perp.NBCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_NBCV <- c()
+  for (i in 1:10){   
+    ind.test = split[[i]]
+    ind.all = unlist(split) 
+    ind.train = ind.all[!ind.all %in% ind.test]
+    mod <- naiveBayes(class2 ~ ., npf.all.clean[ind.train, ], laplace = 1)
+    phat_NBCV[ind.test]<- predict(mod, npf.all.clean[ind.test,], type = "raw")[,2]
+  }
+  l.acc.NBCV = c(l.acc.NBCV,accuracy(phat_NBCV, class2_num_all))
+  l.perp.NBCV = c(l.perp.NBCV,perplexity(phat_NBCV, npf.all.clean$class2))
 }
 
 npf_results[nrow(npf_results)+1,] <- c("Naive Bayes", 
                                        round(accuracy(phat_NB_train, class2_num_train),3), 
                                        round(accuracy(phat_NB, class2_num),3), 
-                                       round(accuracy(phat_NBCV, class2_num_all),3), 
+                                       round(mean(l.acc.NBCV),3), 
                                        round(perplexity(phat_NB_train, npf_train$class2),3), 
                                        round(perplexity(phat_NB, npf_valid$class2),3), 
-                                       round(perplexity(phat_NBCV, npf.all.clean$class2),3))
+                                       round(mean(l.perp.NBCV),3))
 
 ```
 
@@ -592,30 +611,37 @@ phat_NB_train <- predict(NB, df_train, type = "raw")[, 2]
 phat_NB <- predict(NB, df_valid, type = "raw")[, 2]
 
 #Cross-Validation
-split = split.CV(npf.all.clean,10)
-phat_NBCV <- c()
-for (i in 1:10){   
-  ind.test = split[[i]]
-  ind.all = unlist(split)
-  ind.train = ind.all[!ind.all %in% ind.test]
-  #first, npf_hidden is removed from the pc's x matrix
-  df <- data.frame(pca_class2$x[-c(465:1429),1:PC, drop=FALSE])
-  #training data to be used in CV - class2 is added to the data
-  df_train <- data.frame(df[ind.train,], class2 = npf.all.clean$class2[ind.train])
-  #validation data to be used in CV
-  df_valid <- df[ind.test,]
-  
-  mod <- naiveBayes(class2 ~ ., df_train, laplace = 1)
-  phat_NBCV[ind.test]<- predict(mod, df_valid, type = "raw")[,2]
+l.acc.NBCV = NULL
+l.perp.NBCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_NBCV <- c()
+  for (i in 1:10){   
+    ind.test = split[[i]]
+    ind.all = unlist(split)
+    ind.train = ind.all[!ind.all %in% ind.test]
+    #first, npf_hidden is removed from the pc's x matrix
+    df <- data.frame(pca_class2$x[-c(465:1429),1:PC, drop=FALSE])
+    #training data to be used in CV - class2 is added to the data
+    df_train <- data.frame(df[ind.train,], class2 = npf.all.clean$class2[ind.train])
+    #validation data to be used in CV
+    df_valid <- df[ind.test,]
+    
+    mod <- naiveBayes(class2 ~ ., df_train, laplace = 1)
+    phat_NBCV[ind.test]<- predict(mod, df_valid, type = "raw")[,2]
+  }
+  l.acc.NBCV = c(l.acc.NBCV,accuracy(phat_NBCV, class2_num_all))
+  l.perp.NBCV = c(l.perp.NBCV,perplexity(phat_NBCV, npf.all.clean$class2))
 }
+
 
 npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA", 
                                        round(accuracy(phat_NB_train, class2_num_train),3), 
                                        round(accuracy(phat_NB, class2_num),3), 
-                                       round(accuracy(phat_NBCV, class2_num_all),3), 
+                                       round(mean(l.acc.NBCV),3), 
                                        round(perplexity(phat_NB_train, npf_train$class2),3), 
-                                       round(perplexity(phat_NB, npf_valid$class2),3),
-                                       round(perplexity(phat_NBCV, npf.all.clean$class2),3))
+                                       round(perplexity(phat_NB, npf_valid$class2),3), 
+                                       round(mean(l.perp.NBCV),3))
 
 ```
 
@@ -638,23 +664,29 @@ phat_LG_train <- phat_LG(npf_train, npf_train)
 phat_LG <- phat_LG(npf_train, npf_valid)
 
 #Cross-Validation
-split = split.CV(npf.all.clean,10)
-phat_LGCV <- c()
-for (i in 1:10){   
-  ind.test = split[[i]]  
-  ind.all = unlist(split)   
-  ind.train = ind.all[!ind.all %in% ind.test]
-  mod <- glm(class2 ~ ., npf.all.clean[ind.train, ], family = "binomial")
-  phat_LGCV[ind.test]<- predict(mod, newdata = npf.all.clean[ind.test,], type = "response")
+l.acc.LGCV = NULL
+l.perp.LGCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_LGCV <- c()
+  for (i in 1:10){   
+    ind.test = split[[i]]  
+    ind.all = unlist(split)   
+    ind.train = ind.all[!ind.all %in% ind.test]
+    mod <- glm(class2 ~ ., npf.all.clean[ind.train, ], family = "binomial")
+    phat_LGCV[ind.test]<- predict(mod, newdata = npf.all.clean[ind.test,], type = "response")
+  }
+  l.acc.LGCV = c(l.acc.LGCV,accuracy(phat_LGCV, class2_num_all))
+  l.perp.LGCV = c(l.perp.LGCV,perplexity(phat_LGCV, npf.all.clean$class2))
 }
 
 npf_results[nrow(npf_results)+1,] <- c("Logistic regression", 
                                        round(accuracy(phat_LG_train, class2_num_train),3), 
                                        round(accuracy(phat_LG, class2_num),3), 
-                                       round(accuracy(phat_LGCV, class2_num_all),3), 
+                                       round(mean(l.acc.LGCV),3), 
                                        round(perplexity(phat_LG_train, npf_train$class2),3), 
                                        round(perplexity(phat_LG, npf_valid$class2),3), 
-                                       round(perplexity(phat_LGCV, npf.all.clean$class2),3))
+                                       round(mean(l.perp.LGCV),3))
 ```
 
 4) k-NN
@@ -703,26 +735,36 @@ knn.Y_num <- ifelse(knn.Y=="event",1,0)
 knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
 
 #Cross-Validation predictions of the class
-knn.Y_CV <- c()
-for (i in 1:10){  
-  ind.test = split[[i]] 
-  ind.all = unlist(split)  
-  ind.train = ind.all[!ind.all %in% ind.test]
-  train.X <- scale(npf.all.clean[ind.train,-1])
-  valid.X <- scale(npf.all.clean[ind.test,-1])
-  train.Y <- npf.all.clean$class2[ind.train]
-  valid.Y <- npf.all.clean$class2[ind.test]
-
-  knn.Y_CV[ind.test] <- knn(train.X, valid.X, train.Y, k=k_sel)
-}
-
-knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
-knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3)
+l.acc.LGCV = NULL
+l.perp.LGCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  knn.Y_CV <- c()
+  for (i in 1:10){  
+    ind.test = split[[i]] 
+    ind.all = unlist(split)  
+    ind.train = ind.all[!ind.all %in% ind.test]
+    train.X <- scale(npf.all.clean[ind.train,-1])
+    valid.X <- scale(npf.all.clean[ind.test,-1])
+    train.Y <- npf.all.clean$class2[ind.train]
+    valid.Y <- npf.all.clean$class2[ind.test]
+  
+    # knn.Y_CV[ind.test] <- knn(train.X, valid.X, train.Y, k=k_sel) #remove
+    knn.Y_CV <- knn(train.X, valid.X, train.Y, k=k_sel)
+    knn.acc_CV <- mean(knn.Y_CV == valid.Y)
+    
+    # knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
+    # 
+    # # knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3) # remove
+    # knn.acc_CV <- mean(ifelse(knn.Y_CV_num==class2_num_all[ind.test],1,0))
+  }
+  l.acc.LGCV = c(l.acc.LGCV,knn.acc_CV)
+  }
 
 npf_results[nrow(npf_results)+1,] <- c("5-NN", 
                                        knn.acc_train, 
                                        knn.acc_valid,
-                                       knn.acc_CV,
+                                       round(mean(l.acc.LGCV,3)),
                                        "","","")
 ```
 
