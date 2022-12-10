@@ -459,6 +459,18 @@ npf_train.rf$class2=class2_num_train
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
+df13=getTree(rf.npf,1,labelVar = T))
+ 
+mygraph = graph_from_data_frame(df13)
+
+ggraph(mygraph, circular = FALSE) + 
+  geom_edge_elbow() +
+  geom_node_point() +
+  geom_node_point(color = "black", size = 12, show.legend = FALSE, family = "serif") +
+  geom_node_text(aes(label = Gini),  colour = 'red', size=8,
+                  show.legend = FALSE, family = "serif") +
+  theme_void()
+
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
 As we can see, no misclassification is done in training data. To see how well the model performs for validation set, we look at the confusion matrix for validation data set:
@@ -539,24 +551,31 @@ phat_Dummy_train <- Dummy_accuracy(npf_train$class2, train_main_value)
 phat_Dummy <- Dummy_accuracy(npf_valid$class2, train_main_value)
 
 #Cross-Validation
-split = split.CV(npf.all.clean,10)
-phat_DummyCV <- c()
-for (i in 1:10){   
-  ind.test = split[[i]]
-  ind.all = unlist(split)
-  ind.train = ind.all[!ind.all %in% ind.test]
-  y <- npf.all.clean$class2[ind.train]
-  train_main_value <- ifelse((length(y[y=="event"])/length(y))>=0.5, 'event','nonevent')
-  phat_DummyCV[i] <- Dummy_accuracy(y, train_main_value)
+l.acc.DummyCV = NULL
+l.perp.DummyCV = NULL
+for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
+  phat_DummyCV <- c()
+  for (i in 1:10){   
+    ind.test = split[[i]]
+    ind.all = unlist(split)
+    ind.train = ind.all[!ind.all %in% ind.test]
+    y <- npf.all.clean$class2[ind.train]
+    train_main_value <- ifelse((length(y[y=="event"])/length(y))>=0.5, 'event','nonevent')
+    phat_DummyCV[i] <- Dummy_accuracy(y, train_main_value)
+  }
+  phat_DummyCV <- mean(phat_DummyCV)
+  l.acc.DummyCV = c(l.acc.DummyCV,phat_DummyCV)
+  l.perp.DummyCV = c(l.perp.DummyCV)
 }
 
 # Mean for Dummy CV
-phat_DummyCV <- mean(phat_DummyCV)
+
 
 npf_results[nrow(npf_results)+1,] <- c("Dummy", 
                                        round(phat_Dummy_train,3), 
                                        round(phat_Dummy,3), 
-                                       round(phat_DummyCV,3), 
+                                       round(mean(l.acc.DummyCV),3), 
                                        round(perplexity(phat_Dummy_train, train_main_value),3), 
                                        round(perplexity(phat_Dummy, train_main_value),3),
                                        "")
@@ -760,7 +779,6 @@ When k = 5 (or 10), the accuracy is highest so 5-NN is added
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
-
 set.seed(42)
 k_sel <- c(5)
 train.X <- scale(npf_train[,-1])
@@ -769,11 +787,19 @@ train.Y <- npf_train$class2
 valid.Y <- npf_valid$class2
 
 #Train
-knn.Y_train <- knn(train.X, train.X, train.Y, k=k_sel)
+knn.Y_train <- knn(train.X, train.X, train.Y, k=k_sel,prob = T)
+p.knn_train = attributes(knn.Y_train)$prob
+ind.no_train = which(knn.Y_train=="nonevent")
+p.knn_train[ind.no_train] = 1-p.knn_train[ind.no_train]
+
 knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
 knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
+accuracy(p.knn_train,ifelse(train.Y=="event",1,0))
+perplexity(p.knn_train,train.Y)
+
+
 #Validation
-knn.Y <- knn(train.X, valid.X, train.Y, k=k_sel)
+knn.Y <- knn(train.X, valid.X, train.Y, k=k_sel,prob = T)
 knn.Y_num <- ifelse(knn.Y=="event",1,0)
 knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
 
@@ -791,24 +817,26 @@ for (l in seq(CV.rep)){
     valid.X <- scale(npf.all.clean[ind.test,-1])
     train.Y <- npf.all.clean$class2[ind.train]
     valid.Y <- npf.all.clean$class2[ind.test]
-  
-    # knn.Y_CV[ind.test] <- knn(train.X, valid.X, train.Y, k=k_sel) #remove
-    knn.Y_CV <- knn(train.X, valid.X, train.Y, k=k_sel)
-    knn.acc_CV <- mean(knn.Y_CV == valid.Y)
     
-    # knn.Y_CV_num <- ifelse(knn.Y_CV=="event",1,0)
-    # 
-    # # knn.acc_CV <- round(mean(ifelse(knn.Y_CV_num==class2_num_all,1,0)),3) # remove
-    # knn.acc_CV <- mean(ifelse(knn.Y_CV_num==class2_num_all[ind.test],1,0))
+    knn.Y_CV <- knn(train.X, valid.X, train.Y, k=k_sel,prob = T)
+    p.knn= attributes(knn.Y_CV)$prob
+    ind.noevent= which(knn.Y_CV=="nonevent")
+    p.knn[ind.noevent] = 1-p.knn[ind.noevent]
+    knn.acc_CV = accuracy(p.knn,ifelse(valid.Y=="event",1,0))
+    knn.perp_CV = perplexity(p.knn,valid.Y)
+    # knn.acc_CV <- mean(knn.Y_CV == valid.Y)
   }
   l.acc.LGCV = c(l.acc.LGCV,knn.acc_CV)
-  }
+  l.perp.LGCV= c(l.perp.LGCV,knn.perp_CV)
+}
 
 npf_results[nrow(npf_results)+1,] <- c("5-NN", 
                                        knn.acc_train, 
                                        knn.acc_valid,
-                                       round(mean(l.acc.LGCV,3)),
-                                       "","","")
+                                       round(mean(l.acc.LGCV),3),
+                                       "",
+                                       "",
+                                       round(mean(l.perp.LGCV),3))
 ```
 
 
@@ -839,10 +867,10 @@ After selecting the model we trained it using the original training data (npf_tr
 --- I have started the code and used log reg with lasso just to get an idea what should be done. We can change the model still :)
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
-
+npf_hidden_clean$class2 = NA
 x.ans <- model.matrix(class2 ~., npf.all.clean)[,-1]
 y.ans <- npf.all.clean$class2
-x.ans.test <- model.matrix(class2 ~., npf_hidden_clean)[,-1] #hidden data does not include class2 so this is not working...?
+x.ans.test <- model.matrix(~.-class2, npf_hidden_clean)[,-1] #hidden data does not include class2 so this is not working...?
 
 cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
 answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
