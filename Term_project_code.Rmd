@@ -715,6 +715,12 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
+--- text about comparison of the models
+
+## Summary
+
+--- which model we chose and why, pros and cons of the selected method
+
 ## Annex: Histograms of variables
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
