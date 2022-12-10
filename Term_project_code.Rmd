@@ -91,9 +91,9 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
      mar=c(0,0,1,0))
 ```
 
-As we can see, there are a lot of highly correlated variables, keeping them all would not improve the predictivity of our models (since the carry the same information). In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we will remove the highly correlated variables.
+As we can see, there are a lot of highly correlated variables, keeping them all would not improve the predictivity of our models (since they carry the same information). In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we will remove the highly correlated variables.
 
-To do so the variables are cluster together based on their correlation; every pairs of variables which have an absolute correlation greater than 0.8 are cluster together. Then a random variable from each cluster is kept for further analysis.
+To do so the variables are clustered together based on their correlation; every pairs of variables which have an absolute correlation greater than 0.8 are clustered together. Then a random variable from each cluster is kept for further analysis.
 
 The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
 
