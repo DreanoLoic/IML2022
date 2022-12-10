@@ -26,7 +26,7 @@ opts_chunk$set(echo = TRUE)
 
 ## Description of data
 
-The training data npf_train.csv and testing data npf_test_hidden.csv were downloaded. The data includes 104 features. The number of observations in training data is 464 and 965 in testing data.
+In the project a data about new particle formation, NPF, is used. The data is divided into training data (npf_train.csv) and testing data (npf_test_hidden.csv) and it includes 104 variables relating to daily measurements taken in Hyytiälä forestry field station. The number of observations in training data is 464 and 965 in testing data.
 
 ```{r, warning=FALSE,echo=FALSE,message=F,warning=FALSE}
 npf <- read.csv("npf_train.csv")
@@ -40,12 +40,11 @@ kable(df1, digits = 3, caption = "Summary of the dataset")
 # str(npf)
 ```
 
-The features include a lot of daily measurements taken in Hyytiälä forestry field station. Some of the features like temperature T and CO2 are measured in different heights. The height is indicated in the name of the feature, for example, T84.mean is the mean temperature at 8.4 meters above the mast base. 
+Some of the variables like temperature T and CO2 are measured in different heights. The height is indicated in the name of the variable, for example, T84.mean is the mean temperature at 8.4 meters above the mast base. The data includes also a response variable indicating if a NPF event has happened during the day or not. In the project a binary classifier is build to predict if an NPF event will happen or not during the day according to the observed measurements.
 
 ## Preprocessing data
 
-The summary of the first four features in training data is:
---- I changed this to be the 4 first because only they are needed to do the next steps of data cleaning. 
+The data includes also some variables that are not needed as variables. A summary of the the variables in training data is below:
 
 ```{r, message=FALSE,echo=FALSE}
 summary(npf[,1:4])
@@ -57,9 +56,9 @@ npf <- npf[, -c(1, 2)]
 npf.var = npf[,-which(apply(npf, 2, function(x) length(unique(x))) == 1)] 
 ```
 
-The column "date" was set to be the row names. Columns "id", "date" and "partlybad" were removed from the data. Because the value of the logical variable "partlybad" is FALSE for all the observations, it doesn't give any information.
+The column "date" was set to be the row names in the training data. Because the value of the logical variable "partlybad" is FALSE for all the observations, it doesn't give any information. Columns "id", "date" and "partlybad" were removed from the data. 
 
-A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to "class4". Variable "class4" indicates the type of the event if it has happened, values "Ia", "Ib" or "II", or "nonevent" if no event has happened during the day. 
+A qualitative variable "class2" is added to the training data. It gets either value "event" or "nonevent" according to "class4". Variable "class4" indicates the type of the event if it has happened ("Ia", "Ib" or "II") or "nonevent" if no event has happened during the day. 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 npf.var$class2 <- factor("event", levels = c("nonevent", "event"))
@@ -67,8 +66,6 @@ npf.var$class2[npf$class4 =="nonevent"] <- "nonevent"
 # reodering of npf.var to have the classes column at the beginning (easier to remove them after)
 npf.var = npf.var[,c(1,102,2:101)]
 ```
-
-The task is to build a binary classifier which predicts if an NPF event will happen or not during the day according to the observed measurements.
 
 ## Data exploration
 
@@ -84,7 +81,7 @@ corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black",
      mar=c(0,0,1,0))
 
 ```
-The same picture for different standard deviation values is
+The same matrix for different standard deviation values is
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,fig.align="center"}
 # the correlation for the standard deviation variable 
 cm_sd <- cor(npf.var[, endsWith(colnames(npf.var), ".std")])
@@ -95,10 +92,12 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
 ```
 
 As we can see, there are a lot of highly correlated variables, keeping them all would not improve the predictivity of our models (since the carry the same information). In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we will remove the highly correlated variables.
+
 To do so the variables are cluster together based on their correlation; every pairs of variables which have an absolute correlation greater than 0.8 are cluster together. Then a random variable from each cluster is kept for further analysis.
 
-The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables.
---- should we put the means and std in the same correlation matrix to see if there are correlation between them and to save space?
+The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
+
+--- I'm happy with the combined matrix and have only that in the final report - how about you, Loic and Outi? :)
 
 ```{r, clean based on correlation,message=FALSE,warning=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -209,51 +208,21 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 
 ```
---- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
---- Is there any good "summary picture" we could use? I tried histograms but there are too many of them...
-```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
-par(mar = c(4, 4, .1, .1))
-# which training set ? 
-npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
-# npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
-# npf.all.full = npf.var[,-1] # Raw data for class2
-# npf = npf.var[,-2] # Raw data for class4
-
-set.seed(42)
-train_id <- sample(1:nrow(npf), 232)
-npf_train <- npf.all.clean[train_id,]
-npf_valid <- npf.all.clean[-train_id,]
-
-
-for (i in colnames(npf_train[,-1])){
-  
-    # hist(npf_train[,i],main = i,col = npf_train$class2)
-  plot(ggplot(npf_train,aes(x=npf_train[,i],fill=npf_train$class2,color=npf_train$class2))+
-    geom_histogram(position="identity",alpha=0.5)+
-    xlab(i)+
-    theme_bw()+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0)+ 
-    theme(legend.position = "right")+
-      labs(fill="Class2:",color="Class2:")+
-        ggtitle(i))
-      
-  #boxplot(pf_train[,i] ~class2, npf_train)
-}
-
-```
-
 
 ## Performance measures
 
 To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of 2 corresponds to coin flipping.
 
-For Random Forest and decision tree perplexity is not calculated but instead ROC curves are looked at.
----- Did we agree on this? :) ROC should still be added to code below
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+#For Random Forest and decision tree perplexity is not calculated but instead ROC curves are looked at.
+#---- Did we agree on this? :) ROC should still be added to code below
+```
 
 If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
 
-Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally large data sets, training data to fit the model and validation data to estimate the accuracy and perplexity.
+Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
+
+Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. The performance measures are the means of the 10 validation results.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -273,11 +242,105 @@ colnames(npf_results) = c("Model", "Train Accuracy", "Validation Accuracy","CV A
 npf_results <- na.omit(npf_results)
 ```
 
-## Investigation of features
+## Investigation of the variables: PCA
 
-To find the most important variables logistic regression with Lasso, decision tree ("basic"), random forest and Principal Component Analysis (PCA) are used to cleaned data. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
+Principal Component Analysis (PCA) is used to study how much we can reduce dimensionality of the data but to save as much of the variability (that is, information) of the data at the same time. We do the PCA using the original training data (npf_train.csv) combined with the original testing data (npf_hidden.csv). As we can see from the histograms of the variables (see the annex), the variables are measured in different units with different magnitudes of variances. Thus, the variables are centered to have zero mean and scaled to have standard deviation one. The responses variable are removed from the data because we are using unsupervised learning method. 
 
-1) Logistic regression with Lasso, lambda selected by Cross-Validation:
+First, we do PCA to the original data before cleaning the correleated variables. The biplot of the analysis is below:
+--- I'm happy with the option 1 and picture with colours! / Sari
+
+```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
+## Option 1 with color -> info training and validation sets seems to cover the same space
+npf_pca <- rbind(npf.var[,-c(1)],  cbind("class2"=NA,npf_hidden[,-c(1:4)]))
+
+#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
+pca.npf <- prcomp(npf_pca[,-1], scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4
+#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+  ggtitle("PCA of the variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
+## Option 2 
+npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
+#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
+pca.npf <- prcomp(npf_pca, scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4
+#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+  ggtitle("PCA of the variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
+
+```
+
+The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only 39.61 % of the variance in the data and the second PC (PC2) 14,95 %. Together they explain only 54,56 % of the variance which is quite poor result the target being more than 80 %.
+---Can we conclude from the picture above if there are any significant outliers?
+
+To see how many PCs are needed to explain more than 80 % of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
+```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
+par(mfrow=c(1,2))
+pca.npf.var <- pca.npf$sdev^2
+pve <- pca.npf.var/sum(pca.npf.var)
+plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained", ylim =c(0,1), type ="b")
+plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained", ylim =c(0,1), type ="b")
+```
+
+For the original data we would need 10-20 PCs to explain most of the variance.
+
+To see how the results are changed after cleaning the data from correlated variables PCA is also done for the cleaned data. The biplot is shown below:
+
+```{r, message=FALSE,echo=FALSE}
+
+## Option 1 with color -> info training and validation sets seems to cover the same space
+columns <- colnames(npf.clean)
+npf_hidden_clean <- cbind("class2"=NA, npf_hidden[,colnames(npf_hidden) %in% columns])
+npf_pca_clean <- rbind(npf.all.clean,npf_hidden_clean)
+pca.npf.clean <- prcomp(npf_pca_clean[,-1], scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
+#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings.label=TRUE)+
+  theme_bw()+
+  ggtitle("PCA of the clean variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
+## Option 2 
+columns <- colnames(npf.clean)
+npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
+npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
+pca.npf.clean <- prcomp(npf_pca_clean, scale = TRUE )
+#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
+#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
+autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
+  theme_bw()+
+  ggtitle("PCA of the clean variables")+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
+
+
+```
+The loading vectors are not as overlapped as previously but the PVE is still quite poor: the two first PCs explains only 38,61 % of the variance. 
+
+Again, PVE by each principal component and the cumulative PVE are investigated:
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
+par(mfrow=c(1,2))
+pca.npf.var <- pca.npf.clean$sdev^2
+pve <- pca.npf.var/sum(pca.npf.var)
+plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
+plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
+
+```
+
+We can see that about 10 first principal components should be used to explain about 80 % of the variance.
+
+The PCA shows that we could reduce the dimensionality of the data from 26 variables (in cleaned data) to some extend. We are going to do that later by using the results of the PCA together with Naive Bayes. In next section we first investigate some other methods which include also feature selections.
+
+## Models including feature selection
+
+Some methods include variable selection in itself, like Lasso and decision trees. We investigate Lasso combined with logistic regression, basic decision tree and random forest. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
+
+1) Logistic regression with Lasso
 
 Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. The lambda is
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
@@ -438,160 +501,13 @@ The importance of the variables are:
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 
-
-
-4) PCA
-PCA is used to the original training data (npf_train.csv with 464 observations) together with the original testing data (npf_hidden.csv) where the variables are centered to have zero mean and scaled to have standard deviation one. The responses variables are removed from the original training data because we are using unsupervised learning method. The first two principal components are:
-
-```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
-## Option 1 with color -> info training and validation sets seems to cover the same space
-npf_pca <- rbind(npf.var[,-c(1)],  cbind("class2"=NA,npf_hidden[,-c(1:4)]))
-
-#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
-pca.npf <- prcomp(npf_pca[,-1], scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4
-#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)+theme_bw()+
-  ggtitle("PCA of the variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
-## Option 2 
-npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
-#the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
-pca.npf <- prcomp(npf_pca, scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4
-#autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
-  ggtitle("PCA of the variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
-
-```
-
----Can we conclude from the picture above if there are any significant outliers?
-
-The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
-```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-par(mfrow=c(1,2))
-pca.npf.var <- pca.npf$sdev^2
-pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained", ylim =c(0,1), type ="b")
-```
-
-```{r, message=FALSE,echo=FALSE}
-#The loadings of 5 first principal components are
-#pca.npf$rotation[,1:5]
-```
-
-PCA is also done for the data where variables with high correleation to other variables are removed (cleaned data). The first two principal components are:
-
-```{r, message=FALSE,echo=FALSE}
-
-## Option 1 with color -> info training and validation sets seems to cover the same space
-columns <- colnames(npf.clean)
-npf_hidden_clean <- cbind("class2"=NA, npf_hidden[,colnames(npf_hidden) %in% columns])
-npf_pca_clean <- rbind(npf.all.clean,npf_hidden_clean)
-pca.npf.clean <- prcomp(npf_pca_clean[,-1], scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
-#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings.label=TRUE)+
-  theme_bw()+
-  ggtitle("PCA of the clean variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
-## Option 2 
-columns <- colnames(npf.clean)
-npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
-npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
-pca.npf.clean <- prcomp(npf_pca_clean, scale = TRUE )
-#if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
-#autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
-  theme_bw()+
-  ggtitle("PCA of the clean variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
-
-
-```
-
-The proportion of variance explained (PVE) by each principal component and the cumulative PVE is shown in the figures below:
-
-```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-par(mfrow=c(1,2))
-pca.npf.var <- pca.npf.clean$sdev^2
-pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
-
-```
-
-According to the results above at least 15 first principal components should be used to explaina bout 90 % of the variance.
---- If you can conclude something else from the results, you can add some text :)
-
 The performance of the classifiers investigated so far are:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
 kable(npf_results)
 ```
 
-## Conclusions and feature selection
-
---- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection previously done here. !!!
-
-The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
----- Should we investigate diagnostic plots for log reg? Should be give weight to well performed classifiers when selecting the variables?
-
-All models use the following variables 
-- RHIRGA: mean is more important than std according to tree and RF
-- H2O mean
-- O3 mean (Logistic Regression with Lasso, lambda = CV ("log reg CV") gives small value to std)
-- CO2: tree and RF uses only std, log regs give value to mean too
-- T std
-- SWS.mean 
-
-The following variables are used in all other models but RF
-- NO.std
-- Pamb0.mean or .std
-
-The following variables are used in all other models but "normal" tree
-- CS.mean (.std only in log reg CV)
-
-These variables are used in some models
-- UV_B.std is used only on log reg CV 
-- UV_A.mean is used only in RF
-- RGlob.mean and RGlob.std (RF, mean also in log reg 0.1)
-- PTG.std (tree, RF)
-- NET.mean
-- RPAR.mean
-- SO2
-
-Because the measures in different heights/levels are highly correlated, we select just one of them.
----- which ones? Should we put more weight to the selections in random forest and log reg CV?
----- Should be produce boxplots, histograms and/or scatterplots to selected variables
-
-We select the following variables to be used in models:
----- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-#selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
-  #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
-#npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
-#npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
-#npf_trimmed <- npf[, colnames(npf) %in% selection]
-#selection
-```
-
-Let's check if there are any correlation left:
-
-```{r, message=FALSE, warning=FALSE,echo=FALSE}
-#cm <- cor(npf_trimmed[,-16])
-#colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
-#corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
-```
-
-
-## Model selection
+## Other models
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 #this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
@@ -847,22 +763,111 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
+## Annex: Histograms of variables
 
+```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
+par(mar = c(4, 4, .1, .1))
+# which training set ? 
+npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
+# npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
+# npf.all.full = npf.var[,-1] # Raw data for class2
+# npf = npf.var[,-2] # Raw data for class4
+
+set.seed(42)
+train_id <- sample(1:nrow(npf), 232)
+npf_train <- npf.all.clean[train_id,]
+npf_valid <- npf.all.clean[-train_id,]
+
+
+for (i in colnames(npf_train[,-1])){
+  
+    # hist(npf_train[,i],main = i,col = npf_train$class2)
+  plot(ggplot(npf_train,aes(x=npf_train[,i],fill=npf_train$class2,color=npf_train$class2))+
+    geom_histogram(position="identity",alpha=0.5)+
+    xlab(i)+
+    theme_bw()+
+    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+        legend.text=element_text(size=11),legend.text.align = 0)+ 
+    theme(legend.position = "right")+
+      labs(fill="Class2:",color="Class2:")+
+        ggtitle(i))
+      
+  #boxplot(pf_train[,i] ~class2, npf_train)
+}
+
+```
+
+## Testing the CV code
+
+if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-#Just testing, if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
 
-#split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
+split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
 
-#perplexity_testi <- c()
+perplexity_testi <- c()
 
-#for (i in 1:10){
- # phat_testi <- c()
-  #mod <- glm(class2 ~ ., npf_trimmed[ind.train, ], family = "binomial")
-  #phat_testi<- predict(mod, newdata = npf_trimmed[ind.test,], type = "response")
-  #perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[ind.test])
-#}
+for (i in 1:10){
+  phat_testi <- c()
+  mod <- glm(class2 ~ ., npf_trimmed[ind.train, ], family = "binomial")
+  phat_testi<- predict(mod, newdata = npf_trimmed[ind.test,], type = "response")
+  perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[ind.test])
+}
 
-#sum(perplexity_testi)/10
+sum(perplexity_testi)/10
 
+```
+
+## Should we remove this old chapter: Conclusions and feature selection
+
+--- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection previously done here. !!!
+
+The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
+---- Should we investigate diagnostic plots for log reg? Should be give weight to well performed classifiers when selecting the variables?
+
+All models use the following variables 
+- RHIRGA: mean is more important than std according to tree and RF
+- H2O mean
+- O3 mean (Logistic Regression with Lasso, lambda = CV ("log reg CV") gives small value to std)
+- CO2: tree and RF uses only std, log regs give value to mean too
+- T std
+- SWS.mean 
+
+The following variables are used in all other models but RF
+- NO.std
+- Pamb0.mean or .std
+
+The following variables are used in all other models but "normal" tree
+- CS.mean (.std only in log reg CV)
+
+These variables are used in some models
+- UV_B.std is used only on log reg CV 
+- UV_A.mean is used only in RF
+- RGlob.mean and RGlob.std (RF, mean also in log reg 0.1)
+- PTG.std (tree, RF)
+- NET.mean
+- RPAR.mean
+- SO2
+
+Because the measures in different heights/levels are highly correlated, we select just one of them.
+---- which ones? Should we put more weight to the selections in random forest and log reg CV?
+---- Should be produce boxplots, histograms and/or scatterplots to selected variables
+
+We select the following variables to be used in models:
+---- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+#selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
+  #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
+#npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
+#npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
+#npf_trimmed <- npf[, colnames(npf) %in% selection]
+#selection
+```
+
+Let's check if there are any correlation left:
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+#cm <- cor(npf_trimmed[,-16])
+#colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
+#corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 ```
 
