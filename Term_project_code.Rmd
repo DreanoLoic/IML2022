@@ -435,7 +435,7 @@ The estimated coefficients with the selected lambda are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
-coef(m.lassoCV)
+#coef(m.lassoCV)
 ```
 As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and many of them are close to zero. Only 4 variables (CS.mean, CS.std, PTG.std and NO168.std) have a value significantly higher than zero.  
 
@@ -459,17 +459,17 @@ npf_train.rf$class2=class2_num_train
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
-df13=getTree(rf.npf,1,labelVar = T))
+#df13=getTree(rf.npf,1,labelVar = T))
  
-mygraph = graph_from_data_frame(df13)
+#mygraph = graph_from_data_frame(df13)
 
-ggraph(mygraph, circular = FALSE) + 
-  geom_edge_elbow() +
-  geom_node_point() +
-  geom_node_point(color = "black", size = 12, show.legend = FALSE, family = "serif") +
-  geom_node_text(aes(label = Gini),  colour = 'red', size=8,
-                  show.legend = FALSE, family = "serif") +
-  theme_void()
+#ggraph(mygraph, circular = FALSE) + 
+#  geom_edge_elbow() +
+#  geom_node_point() +
+#  geom_node_point(color = "black", size = 12, show.legend = FALSE, family = "serif") +
+#  geom_node_text(aes(label = Gini),  colour = 'red', size=8,
+#                  show.legend = FALSE, family = "serif") +
+#  theme_void()
 
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
@@ -708,8 +708,9 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 ```
 
 3) Logistic regression
---- with or without interactions? now it's without
---- Do we need this at all?
+
+To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the 26 variables.
+
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
 phat_LG <- function(npf_train,
@@ -865,15 +866,14 @@ After selecting the model we trained it using the original, cleaned training dat
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
 npf_hidden_clean$class2 = NA
-x.ans <- model.matrix(class2 ~., npf.all.clean)[,-1]
+x.ans <- as.matrix(npf.clean)
 y.ans <- npf.all.clean$class2
-x.ans.test <- as.matrix(npf_hidden_clean[,-1]) #hidden data does not include class2 so this is not working...?
+x.ans.test <- as.matrix(npf_hidden_clean[,-1]) 
 
-cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
-answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
+#cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
+answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = 0.09)
 
-#p <- predict(answer.model, newx = x.ans.test, type = "response")
-p <- answer.model %>% predict(newx = x.ans.test)
+p <- predict(answer.model, newx = x.ans.test, type = "response")
 class4 <- ifelse(p>0.5,"II", "nonevent")
 
 answer <- data.frame(class4, p)
