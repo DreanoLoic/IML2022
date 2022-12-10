@@ -752,10 +752,23 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
---- CV Accuracy of the selected method should be reported as well as predicted class and probabilities to observations in npf_hidden
+--- After selecting the model we should train it using the npf_train.csv after cleaning (npf.all.clean) 
+--- Then we should calcluate CV Accuracy and predict probabilities in npf_hidden and give labels to the data
 --- we need to convert class "event" to one of the types Ia, Ib or II - we should use the one that has the highest probability in the data (npf_train.csv).
+--- I have started the code and have used log reg with lasso just to get an idea what should be done. We can change the model still :)
 
-```{r, message=FALSE, echo=FALSE,warning=FALSE}
+```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
+
+x <- model.matrix(class2 ~., npf.all.clean)[,-1]
+y <- npf.all.clean$class2
+#x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+
+cv.lambda <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
+answer.model <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+
+phat.answer <- predict(mod, newx = x.test, type = "response")
+
+answer <- data.frame()
 
 
 ```
