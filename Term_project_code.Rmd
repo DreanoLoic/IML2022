@@ -832,24 +832,27 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
---- After selecting the model we should train it using the npf_train.csv after cleaning (npf.all.clean) 
---- Then we should calcluate CV Accuracy and predict probabilities in npf_hidden and give labels to the data
---- we need to convert class "event" to one of the types Ia, Ib or II - we should use the one that has the highest probability in the data (npf_train.csv).
---- I have started the code and have used log reg with lasso just to get an idea what should be done. We can change the model still :)
+After selecting the model we trained it using the original training data (npf_train.csv) after cleaning the correlated variables. The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type occured most often in the training data.
+
+--- Then we should calculate CV Accuracy and predict probabilities in npf_hidden and give labels to the data
+--- I have started the code and used log reg with lasso just to get an idea what should be done. We can change the model still :)
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
 
-x <- model.matrix(class2 ~., npf.all.clean)[,-1]
-y <- npf.all.clean$class2
-#x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+x.ans <- model.matrix(class2 ~., npf.all.clean)[,-1]
+y.ans <- npf.all.clean$class2
+x.ans.test <- model.matrix(class2 ~., npf_hidden_clean)[,-1] #hidden data does not include class2 so this is not working...?
 
-cv.lambda <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
-answer.model <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
+answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
 
-phat.answer <- predict(mod, newx = x.test, type = "response")
+p <- predict(answer.model, newx = x.ans.test, type = "response")
+class4 <- c(ifelse(p>0.5,"event", "nonevent"))
 
-answer <- data.frame()
+answer <- data.frame(class4,p)
+#CV Accuracy should be calculated and added at the beginning of the data frame "aswer"
 
+#write.csv(answer, "C:\\...path name...\\answer.csv", row.names = FALSE)
 
 ```
 
