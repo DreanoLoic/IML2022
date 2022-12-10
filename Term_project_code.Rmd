@@ -258,8 +258,6 @@ npf_results <- na.omit(npf_results)
 Principal Component Analysis (PCA) is used to study how much we can reduce dimensionality of the data but to save as much of the variability (that is, information) of the data at the same time. We do the PCA using the original training data (npf_train.csv) combined with the original testing data (npf_hidden.csv). As we can see from the histograms of the variables (see the annex), the variables are measured in different units with different magnitudes of variances. Thus, the variables are centered to have zero mean and scaled to have standard deviation one. The responses variable are removed from the data because we are using unsupervised learning method. 
 
 First, we do PCA to the original data before cleaning the correlated variables. The biplot of the analysis is below:
---- I'm happy with the option 1 and picture with colours! / Sari
---- Me too! There is a little bit more information. / Outi
 
 ```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
 ## Option 1 with color -> info training and validation sets seems to cover the same space
@@ -273,17 +271,19 @@ autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)
   ggtitle("PCA of the variables")+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
+```
+
+```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
 ## Option 2 
-npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
+#npf_pca <- rbind(npf[,-c(1:2)], npf_hidden[,-c(1:4)])
 #the old data that was used in pca: npf_pca <- npf[,-c(1,102)]
-pca.npf <- prcomp(npf_pca, scale = TRUE )
+#pca.npf <- prcomp(npf_pca, scale = TRUE )
 #if we get to know class4 in npf_hidden, we can use colouring according to class4
 #autoplot(pca.npf,data=npf_pca,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
-  ggtitle("PCA of the variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
-
+#autoplot(pca.npf,data=npf_pca,loadings=TRUE,loadings.label=TRUE)+theme_bw()+
+#  ggtitle("PCA of the variables")+
+#    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+#        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 ```
 
 The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only 39.61 % of the variance in the data and the second PC (PC2) 14,95 %. Together they explain only 54,56 % of the variance which is quite poor result the target being more than 80 %.
@@ -294,8 +294,8 @@ To see how many PCs are needed to explain more than 80 % of the variance the PVE
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained", ylim =c(0,1), type ="b")
+plot(pve, xlab = "Principal Component", ylab = "PVE", ylim =c(0,1), type ="b")
+plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE", ylim =c(0,1), type ="b")
 ```
 
 For the original data we would need 10-20 PCs to explain most of the variance.
@@ -316,21 +316,24 @@ autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings
   ggtitle("PCA of the clean variables")+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
+```
+
+```{r, message=FALSE,echo=FALSE}
 ## Option 2 
-columns <- colnames(npf.clean)
-npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
-npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
-pca.npf.clean <- prcomp(npf_pca_clean, scale = TRUE )
+#columns <- colnames(npf.clean)
+#npf_hidden_clean <- npf_hidden[,colnames(npf_hidden) %in% columns]
+#npf_pca_clean <- rbind(npf.all.clean[,-1], npf_hidden_clean)
+#pca.npf.clean <- prcomp(npf_pca_clean, scale = TRUE )
 #if we get to know class4 in npf_hidden, we can use colouring according to class4 (or class2)
 #autoplot(pca.npf,data=npf_pca_clean,colour="class4",loadings=TRUE,loadings.label=TRUE)
-autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
-  theme_bw()+
-  ggtitle("PCA of the clean variables")+
-    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
-
+#autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,loadings.label=TRUE)+
+#  theme_bw()+
+#  ggtitle("PCA of the clean variables")+
+#    theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
+#        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 
 ```
+
 The loading vectors are not as overlapped as previously but the PVE is still quite poor: the two first PCs explains only 38,61 % of the variance. 
 
 Again, PVE by each principal component and the cumulative PVE are investigated:
@@ -339,8 +342,8 @@ Again, PVE by each principal component and the cumulative PVE are investigated:
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf.clean$sdev^2
 pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative Proportion of variance Explained, cleaned data", ylim =c(0,1), type ="b")
+plot(pve, xlab = "Principal Component", ylab = "PVE, cleaned data", ylim =c(0,1), type ="b")
+plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE, cleaned data", ylim =c(0,1), type ="b")
 
 ```
 
