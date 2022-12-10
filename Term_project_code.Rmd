@@ -870,15 +870,17 @@ After selecting the model we trained it using the original training data (npf_tr
 npf_hidden_clean$class2 = NA
 x.ans <- model.matrix(class2 ~., npf.all.clean)[,-1]
 y.ans <- npf.all.clean$class2
-x.ans.test <- model.matrix(~.-class2, npf_hidden_clean)[,-1] #hidden data does not include class2 so this is not working...?
+x.ans.test <- as.matrix(npf_hidden_clean[,-1]) #hidden data does not include class2 so this is not working...?
 
 cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
 answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
 
-p <- predict(answer.model, newx = x.ans.test, type = "response")
-class4 <- c(ifelse(p>0.5,"event", "nonevent"))
+#p <- predict(answer.model, newx = x.ans.test, type = "response")
+p <- answer.model %>% predict(newx = x.ans.test)
+class4 <- ifelse(p>0.5,"event", "nonevent")
 
-answer <- data.frame(class4,p)
+answer <- data.frame(class4, p)
+colnames(answer) <- c("class4", "p")
 #CV Accuracy should be calculated and added at the beginning of the data frame "aswer"
 
 #write.csv(answer, "C:\\...path name...\\answer.csv", row.names = FALSE)
