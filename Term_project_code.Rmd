@@ -522,10 +522,46 @@ Even though the accuracy of random forest in training and validation set is bett
 
 The models tested in addition to the logistic regression with Lasso and random forest are a dummy model, Naive Bayes using reduced dimensionality, logistic regression using all variables in cleaned data (to compare the results) and k nearest neighbor.
 
-1) Dummy: 
----- write a description of the method and the code itself...
+1) Dummy
 
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
+# Finding out the main class in the training data
+train_main_value <- ifelse(length(npf_train$class2[npf_train$class2=="event"])/length(npf_train$class2)>=0.5, 'event','nonevent')
+ 
+# The ratio of the value class to the total in the data
+Dummy_accuracy <- function(data, value){
+length(data[data==value])/length(data)
+}
+#Training data
+phat_Dummy_train <- Dummy_accuracy(npf_train$class2, train_main_value)
+# Validation data
+phat_Dummy <- Dummy_accuracy(npf_valid$class2, train_main_value)
+
+#Cross-Validation
+split = split.CV(npf.all.clean,10)
+phat_DummyCV <- c()
+for (i in 1:10){   
+  ind.test = split[[i]]
+  ind.all = unlist(split)
+  ind.train = ind.all[!ind.all %in% ind.test]
+  y <- npf.all.clean$class2[ind.train]
+  train_main_value <- ifelse((length(y[y=="event"])/length(y))>=0.5, 'event','nonevent')
+  phat_DummyCV[i] <- Dummy_accuracy(y, train_main_value)
+}
+
+# Mean for Dummy CV
+phat_DummyCV <- mean(phat_DummyCV)
+
+npf_results[nrow(npf_results)+1,] <- c("Dummy", 
+                                       round(phat_Dummy_train,3), 
+                                       round(phat_Dummy,3), 
+                                       round(phat_DummyCV,3), 
+                                       round(perplexity(phat_Dummy_train, train_main_value),3), 
+                                       round(perplexity(phat_Dummy, train_main_value),3),
+                                       "")
+
+```
 
 
 2) Naive Bayes
