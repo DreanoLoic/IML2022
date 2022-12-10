@@ -437,7 +437,7 @@ The estimated coefficients with the selected lambda are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
-coef(m.lassoCV)
+#coef(m.lassoCV)
 ```
 As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and many of them are close to zero. Only 4 variables (CS.mean, CS.std, PTG.std and NO168.std) have a value significantly higher than zero.  
 
@@ -601,7 +601,6 @@ for (l in seq(CV.rep)){
   l.perp.DummyCV = c(l.perp.DummyCV)
 }
 
-# Mean for Dummy CV
 
 
 npf_results[nrow(npf_results)+1,] <- c("Dummy", 
@@ -740,8 +739,9 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 ```
 
 3) Logistic regression
---- with or without interactions? now it's without
---- Do we need this at all?
+
+To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the 26 variables.
+
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
 phat_LG <- function(npf_train,
@@ -893,25 +893,35 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original training data (npf_train.csv) after cleaning the correlated variables. The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type occured most often in the training data.
-
---- Then we should calculate CV Accuracy and predict probabilities in npf_hidden and give labels to the data
---- I have started the code and used log reg with lasso just to get an idea what should be done. We can change the model still :)
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type occured most often in the training data. That is the type "II" with the proportion of 48,7 % the others being 14,7 % for the type "Ia" and 36,6 % for type "Ib".
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
-npf_hidden_clean$class2 = NA
-x.ans <- model.matrix(class2 ~., npf.all.clean)[,-1]
-y.ans <- npf.all.clean$class2
-x.ans.test <- model.matrix(~., npf_hidden_clean)[,-1] #hidden data does not include class2 so this is not working...?
 
-cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
-answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
+
+# The frequency of the events classes in the training data, needs npf.var table
+events_classes <- c("Ia", "Ib", "II")
+events_freq <- c()
+for (i in 1:length(events_classes)){
+events_freq[i] <- length(npf.var$class4[npf.var$class4==events_classes[i]])/length(npf.var$class4[npf.var$class4!="nonevent"])  
+}
+names(events_freq) <- events_classes
+
+
+npf_hidden_clean$class2 = NA
+x.ans <- as.matrix(npf.clean)
+y.ans <- npf.all.clean$class2
+x.ans.test <- as.matrix(npf_hidden_clean[,-1]) 
+
+
+#cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
+answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = 0.09)
 
 p <- predict(answer.model, newx = x.ans.test, type = "response")
-class4 <- c(ifelse(p>0.5,"event", "nonevent"))
+class4 <- ifelse(p>0.5,"II", "nonevent")
 
-answer <- data.frame(class4,p)
-#CV Accuracy should be calculated and added at the beginning of the data frame "aswer"
+answer <- data.frame(class4, p)
+colnames(answer) <- c("class4", "p")
+#CV Accuracy should be the same already calculated - it should be added at the beginning of the data frame "answer"
 
 #write.csv(answer, "C:\\...path name...\\answer.csv", row.names = FALSE)
 
