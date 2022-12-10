@@ -208,6 +208,23 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 
 ```
+<<<<<<< HEAD
+--- I think we should put here some plot or graphical summary of the variables left after cleaning to get an overview of the values (for example to justify scaling in PCA).
+--- Is there any good "summary picture" we could use? I tried histograms but there are too many of them...
+```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
+
+# which training set ? 
+npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
+# npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
+# npf.all.full = npf.var[,-1] # Raw data for class2
+# npf = npf.var[,-2] # Raw data for class4
+
+set.seed(42)
+train_id <- sample(1:nrow(npf), 232)
+npf_train <- npf.all.clean[train_id,]
+npf_valid <- npf.all.clean[-train_id,]
+
+```
 
 ## Performance measures
 
@@ -748,12 +765,22 @@ for (i in colnames(npf_train[,-1])){
     theme_bw()+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0)+ 
-    theme(legend.position = "right")+
-      labs(fill="Class2:",color="Class2:")+
-        ggtitle(i))
+    theme(legend.position = "top")+
+      labs(fill="Class2:",color="Class2:"))
+        # ggtitle(i))
       
   #boxplot(pf_train[,i] ~class2, npf_train)
-}
+}# which training set ? 
+npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
+# npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
+# npf.all.full = npf.var[,-1] # Raw data for class2
+# npf = npf.var[,-2] # Raw data for class4
+
+set.seed(42)
+train_id <- sample(1:nrow(npf), 232)
+npf_train <- npf.all.clean[train_id,]
+npf_valid <- npf.all.clean[-train_id,]
+
 
 ```
 
@@ -764,7 +791,7 @@ for (i in colnames(npf_train[,-1])){
 ## Testing the CV code
 
 if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
-```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
+```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE,eval=FALSE}
 
 split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
 
