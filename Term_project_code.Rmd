@@ -569,7 +569,6 @@ for (l in seq(CV.rep)){
   l.perp.DummyCV = c(l.perp.DummyCV)
 }
 
-# Mean for Dummy CV
 
 
 npf_results[nrow(npf_results)+1,] <- c("Dummy", 
@@ -865,6 +864,17 @@ According to the performance comparison we select logistic regression with Lasso
 After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type occured most often in the training data. That is the type "II" with the proportion of 48,7 % the others being 14,7 % for the type "Ia" and 36,6 % for type "Ib".
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
+
+
+# The frequency of the events classes in the training data, needs npf.var table
+events_classes <- c("Ia", "Ib", "II")
+events_freq <- c()
+for (i in 1:length(events_classes)){
+events_freq[i] <- length(npf.var$class4[npf.var$class4==events_classes[i]])/length(npf.var$class4[npf.var$class4!="nonevent"])  
+}
+names(events_freq) <- events_classes
+
+
 npf_hidden_clean$class2 = NA
 x.ans <- as.matrix(npf.clean)
 y.ans <- npf.all.clean$class2
