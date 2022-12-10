@@ -837,7 +837,7 @@ Let's check if there are any correlation left:
 
 2) A classification tree selects the following variables with the misclassification as follows
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
 
 set.seed(42)
 tree.npf <- tree(class2~., npf_train)
@@ -845,25 +845,25 @@ summary(tree.npf)
 kable(summary(tree.npf)$used,col.names = "Variables")
 ```
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE, eval=FALSE}
 plot(tree.npf)
 text(tree.npf, pretty = 0, cex=0.6)
 ```
 Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
 tree.pred <- predict(tree.npf, npf_valid, type = "class")
 kable(table(tree.pred, npf_valid$class2))
 ```
 Predicted classes vs. actual classes for training data:
 --- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
 tree.pred_train <- predict(tree.npf, npf_train, type = "class")
 kable(table(tree.pred_train, npf_train$class2))
 ```
 The accuracies are respectively
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
 acc_tree <- (113+107)/232
 acc_tree_train <- (104+94)/232
 npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
@@ -873,7 +873,7 @@ round(acc_tree_train,3)
 
 ## Do we need the CV-code from problem 2?
 
-```{r, message=FALSE, warning=FALSE,echo=FALSE}
+```{r, message=FALSE, warning=FALSE,echo=FALSE, eval = FALSE}
 #this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
 #Cross-Validation Predictions
 #1) split n items into k fold of roughly equal size
