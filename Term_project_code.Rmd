@@ -652,6 +652,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 
 3) Logistic regression
 --- with or without interactions? now it's without
+--- Do we need this at all?
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
 phat_LG <- function(npf_train,
@@ -755,7 +756,6 @@ npf_results[nrow(npf_results)+1,] <- c("5-NN",
                                        knn.acc_CV,
                                        "","","")
 ```
-
 
 
 Performance measures for the methods are:
