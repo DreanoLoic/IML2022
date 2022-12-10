@@ -338,11 +338,12 @@ The PCA shows that we could reduce the dimensionality of the data from 26 variab
 
 ## Models including feature selection
 
-Some methods include variable selection in itself, like Lasso and decision trees. We investigate Lasso combined with logistic regression, basic decision tree and random forest. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
+Some methods include variable selection in itself, like Lasso and decision trees. We investigate logistic regression with Lasso and random forest. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
 
 1) Logistic regression with Lasso
 
 Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. The lambda is
+
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
 split.CV = function(Mat,nbG){
@@ -395,80 +396,54 @@ for (i in 1:10){
 }
 
 #Performance measures into the table
-npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso CV", 
+npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso", 
                                        round(accuracy(phat_LGLCV_train, class2_num_train),3), 
                                        round(accuracy(phat_LGLCV, class2_num),3), 
                                        round(accuracy(phat_LGLCV_CV, class2_num_all),3), 
                                        round(perplexity(phat_LGLCV_train, npf_train$class2),3), 
                                        round(perplexity(phat_LGLCV, npf_valid$class2),3), 
                                        round(perplexity(phat_LGLCV_CV, npf.all.clean$class2),3))
-cv.lambda
+round(cv.lambda,3)
 ```
 
-The estimated coefficients are
+The estimated coefficients with the selected lambda are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
 coef(m.lassoCV)
 ```
-As we can see, some of the variables have a zero coefficient meaning that Lasso has done variable selection.
+As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and many of them are close to zero. Only 4 variables (CS.mean, CS.std, PTG.std and NO168.std) have a value significantly higher than zero.  
 
-2) A "normal" decision tree selects the following variables with the misclassification as follows
+2) Random Forest
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
+Decision trees are learning methods that segment observations into regions. The segmentation is done recursively using binary decision rules which minimize the selected measure like residual sum of squares (RSS) in case of regression tree or e.g. classification error rate or Gini index in case of classification tree. A prediction for an observation belonging to a certain region is given by the mean of responses of the training observations in the same region (regression tree) or by the label to which the majority of the training observations belong to in the same region (classification tree). 
 
-set.seed(42)
-tree.npf <- tree(class2~., npf_train)
-summary(tree.npf) 
-kable(summary(tree.npf)$used,col.names = "Variables")
-```
+Random Forest builds a number of decision trees using each time a sample of training data, sampling done by bootstrapping. Predictions are averages of the resulting trees. During each split only one of the given number of randomly selected variables are considered. By reducing the number of variables the correlation between the trees is reduced.
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-plot(tree.npf)
-text(tree.npf, pretty = 0, cex=0.6)
-```
-Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
+To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value 1 when an event has occured and value 0 in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used square root of the number of variables in the data.
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-tree.pred <- predict(tree.npf, npf_valid, type = "class")
-kable(table(tree.pred, npf_valid$class2))
-```
-Predicted classes vs. actual classes for training data:
---- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
+--- in case of classification tree the number of variables should be 26^0.5 and in regression 26/3 => I suppose we have regression now when using dummy response? That's why I changed the number from 5 to 9
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-tree.pred_train <- predict(tree.npf, npf_train, type = "class")
-kable(table(tree.pred_train, npf_train$class2))
-```
-The accuracies are respectively
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-acc_tree <- (113+107)/232
-acc_tree_train <- (104+94)/232
-npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
-round(acc_tree,3)
-round(acc_tree_train,3)
-```
 
-3) Random Forest with 5 variables (square root of the number of features) used in each run
-
-Confusion matrix for training data
+Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 set.seed(42)
 npf_train.rf = npf_train
 npf_train.rf$class2=class2_num_train
-rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 5, importance = TRUE)
+rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
+As we can see, no misclassification is done in training data. To see how well the model perfoms for validation set, we look at the confusion matrix for validation data set:
 
-Confusion matrix for validation
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 phat_RF <- predict(rf.npf, newdata = npf_valid)
 
 kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
+There are 19 observations predicted to be nonevent even though the event has occured and respectively 16 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
@@ -495,11 +470,15 @@ npf_results[nrow(npf_results)+1,] <- c("Random Forest",
                                        round(perplexity(phat_RF, npf_valid$class2),3), 
                                        round(perplexity(phat_RF_CV, npf.all.clean$class2),3))
 ```
-The importance of the variables are:
+
+The importance of variables are:
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
+
+We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+--- we should add explanations to %incMSE and IncNodePurity and do some conclusions of the pictures
 
 The performance of the classifiers investigated so far are:
 
@@ -507,38 +486,11 @@ The performance of the classifiers investigated so far are:
 kable(npf_results)
 ```
 
+Even though the accuracy of random forest in training and validation set is better than logistic regression with Lasso the performance estimated by cross-validation is not as good. Especially, perplexity of logistic regression with Lasso in validation set and cross-validation is better than of random forest.
+
 ## Other models
 
-```{r, message=FALSE, warning=FALSE,echo=FALSE}
-#this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
-#Cross-Validation Predictions
-#1) split n items into k fold of roughly equal size
-kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
-#2) find cross-validation predictions
-cv <- function(
-    formula,
-    data,
-    model = lm,
-    n = nrow(data),
-    k = min(n, 10),
-    split = kpart(n,k),
-    train = function(data){model(formula, data = data)},
-    pred = function(model, data){predict(model, newdata = data)}){
-  phat <- NULL
-  for (i in 1:k){
-    mod <- train(data[ind.train, ])
-    if (is.null(phat)){
-      phat <- pred(mod, data)
-    } else {
-      phat[ind.test]<- pred(mod, data[ind.test,])
-    }
-  }
-  phat
-}
-
-```
-
-The models tested in addition to the ones already tested are
+The models tested in addition to the logistic regression with Lasso and random forest are a dummy model, Naive Bayes using reduced dimensionality, logistic regression using all variables in cleaned data (to compare the results) and k nearest neighbor.
 
 1) Dummy: 
 ---- write a description of the method and the code itself...
@@ -797,6 +749,10 @@ for (i in colnames(npf_train[,-1])){
 
 ```
 
+## END
+
+## Some testing and old codes (keep or remove?)
+
 ## Testing the CV code
 
 if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
@@ -871,3 +827,71 @@ Let's check if there are any correlation left:
 #corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
 ```
 
+## Do we remove this: A basic decision tree
+
+2) A classification tree selects the following variables with the misclassification as follows
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+
+set.seed(42)
+tree.npf <- tree(class2~., npf_train)
+summary(tree.npf) 
+kable(summary(tree.npf)$used,col.names = "Variables")
+```
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+plot(tree.npf)
+text(tree.npf, pretty = 0, cex=0.6)
+```
+Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+tree.pred <- predict(tree.npf, npf_valid, type = "class")
+kable(table(tree.pred, npf_valid$class2))
+```
+Predicted classes vs. actual classes for training data:
+--- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+tree.pred_train <- predict(tree.npf, npf_train, type = "class")
+kable(table(tree.pred_train, npf_train$class2))
+```
+The accuracies are respectively
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+acc_tree <- (113+107)/232
+acc_tree_train <- (104+94)/232
+npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
+round(acc_tree,3)
+round(acc_tree_train,3)
+```
+
+## Do we need the CV-code from problem 2?
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+#this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
+#Cross-Validation Predictions
+#1) split n items into k fold of roughly equal size
+kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
+#2) find cross-validation predictions
+cv <- function(
+    formula,
+    data,
+    model = lm,
+    n = nrow(data),
+    k = min(n, 10),
+    split = kpart(n,k),
+    train = function(data){model(formula, data = data)},
+    pred = function(model, data){predict(model, newdata = data)}){
+  phat <- NULL
+  for (i in 1:k){
+    mod <- train(data[ind.train, ])
+    if (is.null(phat)){
+      phat <- pred(mod, data)
+    } else {
+      phat[ind.test]<- pred(mod, data[ind.test,])
+    }
+  }
+  phat
+}
+
+```
