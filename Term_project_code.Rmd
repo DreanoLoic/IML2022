@@ -527,6 +527,9 @@ The models tested in addition to the logistic regression with Lasso and random f
 ---- write a description of the method and the code itself...
 
 2) Naive Bayes
+
+Naive Bayes is a generative classifier which assumes that the variables in each class (event or nonevent) are independent. It can be assumed that this is not the case in NPF data, but Naive Bayes can still produce quite decent results.
+
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 phat_NB <- function(npf_train,
@@ -564,7 +567,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes",
 
 ```
 
-Accuracy of Naive Bayes when using the first 15 principal components to reduce the dimensionality of the data. The highest accuracy is marked with red.
+In addition to using Naive Bayes with all 26 variables in the cleaned data, we use Naive Bayes after reducing dimensionality by PCA. This means, that we use the selected number of the principal component score vectors as an input to the model. To decide the number of the PCs to use, we look at the accuracy of the model in validation data with different number of first PCs used (see the picture below). The highest accuracy is marked with red.
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 #perfoming PCA to the whole, cleaned data (npf_train.csv and npf_hidden.csv cleaned from correlated variables) 
@@ -588,7 +591,7 @@ i <- which.max(acc_NB); points(i,acc_NB[i],pch=16,col="red")
 legend("bottomright",c("accuracy"),lty=c("solid"),pch=c(1))
 ```
 
-The highest accuracy is received when using 5 first PCs so this is added to be one of the possible methods.
+The highest accuracy is received when using the five first PCs so this model is added to the comparison of methods.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 #selected number of PC
@@ -746,11 +749,19 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
---- text about comparison of the models
+As we already concluded logistic regression with Lasso seems to perform slightly better than random forest. Naive Bayes with all 26 variables performs poorly producing infinitive perplexity in validation data. When the dimensionality is reduced using PCA the performance improves significantly but does not outperform logistic regression with Lasso. As expected, the performance of dummy model is worst and is used only as a reference. 
+--- This text needs to be updated after the codes are ready!!!
+
 
 ## Summary
 
---- which model we chose and why, pros and cons of the selected method
+We started by looking at the data and especially the correlations between variables. 
+--- summary of data investigations should still be completed...
+
+--- the following text is just an example what to write if we happen to choose log reg with Lasso :)
+According to the performance comparison we select logistic regression with Lasso as our classifier. It gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method is the variable selection done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous table that the performance measures of the model are pretty good. 
+
+--- should we repeat the performance of the selected model here?
 
 ## Annex: Histograms of variables
 
