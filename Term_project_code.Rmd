@@ -234,9 +234,10 @@ for (i in colnames(npf_train[,-1])){
     theme_bw()+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
         legend.text=element_text(size=11),legend.text.align = 0)+ 
-    theme(legend.position = "right")+
-      labs(fill="Class2:",color="Class2:")+
-        ggtitle(i))
+    theme(legend.position = "top")+
+      labs(fill="Class2:",color="Class2:")
+        # ggtitle(i)
+        )
       
   #boxplot(pf_train[,i] ~class2, npf_train)
 }
