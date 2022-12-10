@@ -3,9 +3,9 @@ title: "Term Project - Group 80"
 author: "Sari Ropponen, Outi Boman, Loic Dreano"
 date: "`r Sys.Date()`"
 output:
-  word_document: default
-  html_document: default
   pdf_document: default
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE,warning=FALSE}
@@ -272,7 +272,7 @@ pca.npf <- prcomp(npf_pca[,-1], scale = TRUE )
 autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)+theme_bw()+
   ggtitle("PCA of the variables")+
     theme(panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),
-        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "right")
+        legend.text=element_text(size=11),legend.text.align = 0, legend.position = "bottom")
 ```
 
 ```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
@@ -292,6 +292,8 @@ The biplot includes the first two principal components (PCs), both the scores an
 ---Can we conclude from the picture above if there are any significant outliers?
 
 To see how many PCs are needed to explain more than 80 % of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
+
+
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
 par(mfrow=c(1,2))
 pca.npf.var <- pca.npf$sdev^2
@@ -577,7 +579,7 @@ In addition to using Naive Bayes with all 26 variables in the cleaned data, we u
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 #perfoming PCA to the whole, cleaned data (npf_train.csv and npf_hidden.csv cleaned from correlated variables) 
-pca_class2 <- prcomp(npf_pca_clean, scale = TRUE)
+pca_class2 <- prcomp(npf_pca_clean[,-1], scale = TRUE)
 
 #calculation of accuracy on data with reduced dimensionality, reduction done by using PCs from 1 to 15
 acc_NB <- c()
