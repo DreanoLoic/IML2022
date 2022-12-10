@@ -97,8 +97,6 @@ To do so the variables are clustered together based on their correlation; every 
 
 The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
 
---- I'm happy with the combined matrix and have only that in the final report - how about you, Loic and Outi? :)
-
 ```{r, clean based on correlation,message=FALSE,warning=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
 elimcor_sansY<-function(X,s=0.80){
@@ -157,33 +155,35 @@ npf.test.clean = npf_hidden[var80]
 ```
 
 ```{r,message=FALSE,warning=FALSE, echo=FALSE}
-cm.2 <- cor(npf.clean[, endsWith(colnames(npf.clean), ".mean")])
-colnames(cm.2) <- rownames(cm.2) <- sapply(colnames(cm.2), function(s) gsub(".mean","",s))
-corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
-         addCoef.col ='black', order = 'FPC', diag=FALSE, 
-         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-         title="Correlation matrix of mean variables for the clean dataset", 
-         mar=c(0,0,1,0))
+#cm.2 <- cor(npf.clean[, endsWith(colnames(npf.clean), ".mean")])
+#colnames(cm.2) <- rownames(cm.2) <- sapply(colnames(cm.2), function(s) gsub(".mean","",s))
+#corrplot(cm.2, method = 'circle', type = 'upper', insig='blank',
+#         addCoef.col ='black', order = 'FPC', diag=FALSE, 
+#         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+#         title="Correlation matrix of mean variables for the clean dataset", 
+#         mar=c(0,0,1,0))
 
 # corrplot(cm.2, order = "FPC", tl.cex=0.5, tl.col= "black")
-cm.2_sd <- cor(npf.clean[, endsWith(colnames(npf.clean), ".std")])
-colnames(cm.2_sd) <- rownames(cm.2_sd) <- sapply(colnames(cm.2_sd), function(s) gsub(".std","",s))
-corrplot(cm.2_sd, method = 'circle', type = 'upper', insig='blank',
-         addCoef.col ='black', order = 'FPC', diag=FALSE, 
-         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-         title="Correlation matrix of std variables for the clean dataset", 
-         mar=c(0,0,1,0))
+#cm.2_sd <- cor(npf.clean[, endsWith(colnames(npf.clean), ".std")])
+#colnames(cm.2_sd) <- rownames(cm.2_sd) <- sapply(colnames(cm.2_sd), function(s) gsub(".std","",s))
+#corrplot(cm.2_sd, method = 'circle', type = 'upper', insig='blank',
+#         addCoef.col ='black', order = 'FPC', diag=FALSE, 
+#         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+#         title="Correlation matrix of std variables for the clean dataset", 
+#         mar=c(0,0,1,0))
 
 #Option 2
-corrplot.mixed(cm.2, order = 'FPC',
-         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-         title="Correlation matrix of mean variables for the clean dataset",
-         mar=c(0,0,1,0))
-corrplot.mixed(cm.2_sd, order = 'FPC',
-         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
-         title="Correlation matrix of std variables for the clean dataset",
-         mar=c(0,0,1,0))
+#corrplot.mixed(cm.2, order = 'FPC',
+#         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+#         title="Correlation matrix of mean variables for the clean dataset",
+#         mar=c(0,0,1,0))
+#corrplot.mixed(cm.2_sd, order = 'FPC',
+#         tl.cex = 0.5, tl.col = "black",number.cex = 0.5,
+#         title="Correlation matrix of std variables for the clean dataset",
+#         mar=c(0,0,1,0))
+```
 
+```{r,message=FALSE,warning=FALSE, echo=FALSE}
 df2=data_frame(" "=c("Measurements","Variables"))
 df2$npf_train = dim(npf.clean)
 df2$npf_test = dim(npf.test.clean)
@@ -197,15 +197,12 @@ corrplot(cm_3, method = 'circle', type = 'upper', insig='blank',
          title="Correlation matrix of variables for the clean dataset", 
          mar=c(0,0,1,0) )
 
-
-
 df3 = data.frame(var80[1:7],var80[8:14],var80[15:21],c(var80[21:26],""))
 colnames(df3)= rep("",4)
 
 kable(df3,caption = "List of kept variables")
 
 kable(df2, digits = 3,caption = "Summary of clean dataset")
-
 
 ```
 
