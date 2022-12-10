@@ -243,6 +243,7 @@ Generalization accuracy and perplexity is calculated using cross-validation. The
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
+
 # which training set ? 
 npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
 # npf = cbind(class2=npf.var$class4,npf.clean) # data without correlated for class4
