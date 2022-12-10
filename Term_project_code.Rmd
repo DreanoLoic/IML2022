@@ -247,7 +247,9 @@ class2_num_all <- c(ifelse(npf.all.clean$class2=="event",1,0))
 ## accuracy if we know the probabilities of ones
 accuracy <- function(p, y) mean(ifelse(p >= 0.5, 1, 0) == y)
 ## perplexity if we know the probabilities of ones
-perplexity <- function(p, y) exp(-mean(log(ifelse(y == "event", p, 1 - p))))
+perplexity <- function(p, y) exp(-mean(log(ifelse(y == "event", 
+                                                  ifelse(p==0,1*10^-100,p),
+                                                  ifelse(p==1,1*10^-100,1 - p)))))
 
 #initialization of result table
 npf_results <- data.frame(matrix(ncol = 7))
@@ -452,28 +454,56 @@ To get predictions of probabilities of event given the observations when using r
 
 Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
-
 set.seed(42)
 npf_train.rf = npf_train
 npf_train.rf$class2=class2_num_train
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
-#df13=getTree(rf.npf,1,labelVar = T))
- 
-#mygraph = graph_from_data_frame(df13)
-
-#ggraph(mygraph, circular = FALSE) + 
-#  geom_edge_elbow() +
-#  geom_node_point() +
-#  geom_node_point(color = "black", size = 12, show.legend = FALSE, family = "serif") +
-#  geom_node_text(aes(label = Gini),  colour = 'red', size=8,
-#                  show.legend = FALSE, family = "serif") +
-#  theme_void()
-
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
 As we can see, no misclassification is done in training data. To see how well the model performs for validation set, we look at the confusion matrix for validation data set:
+
+
+```{r test for tree plot, message=FALSE,warning=FALSE, echo=FALSE}
+
+ plot.getTree <- function(rforest=NULL,tr=NULL,k=1, depth=0,main=NULL,caret=F, ...){
+  require(randomForest)
+  if(caret){
+    mod<-rforest
+    rforest<-mod$finalModel
+  }
+  
+  if(is.null(rforest) && is.null(tr))stop('One of a random forest object or a tree object must be input')
+  if(!is.null(rforest)){
+    gTree <- getTree(rforest, k=k, labelVar=TRUE)
+    
+    if(caret){
+      x <- as.tree(gTree, mod, caret=T)
+    }
+    else{
+      x <- as.tree(gTree, rforest)
+    }
+    
+  } else {
+    x <- tr
+  }
+  if(depth>0){
+    x <- snip.depth(x,depth)
+  }
+  x
+  plot(x, type='uniform')
+  text(x,)
+  # labelBG(x)
+  # labelYN(x)
+  title(main=main)
+ }
+ plot.getTree(rf.npf,k=9)
+
+ 
+ 
+
+```
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 phat_RF <- predict(rf.npf, newdata = npf_valid)
@@ -488,17 +518,19 @@ There are 19 observations predicted to be nonevent even though the event has occ
 l.acc.RF_CV = NULL
 l.perp.RF_CV = NULL
 for (l in seq(CV.rep)){
-  split = split.CV(npf.all.clean,10)
+  split = split.CV(npf_train.rf,10)
   phat_RF_CV <- c()
   for (i in 1:10){
     ind.test = split[[i]]
     ind.all = unlist(split)
     ind.train = ind.all[!ind.all %in% ind.test]
-    x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
-    y <- npf.all.clean$class2[ind.train]
-    x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
-    mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
-    phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
+    # x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+    # y <- npf.all.clean$class2[ind.train]
+    rf.npf_CV <- randomForest(class2~., data = npf_train.rf[ind.train,], mtry = 9, importance = TRUE)
+    phat_RF_CV<- predict(rf.npf_CV, newdata = npf_train.rf[ind.test,])
+    # x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
+    # mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+    # phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
   }
   l.acc.RF_CV = c(l.acc.RF_CV,accuracy(phat_RF_CV, class2_num_all))
   l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
@@ -888,6 +920,7 @@ npf_hidden_clean$class2 = NA
 x.ans <- as.matrix(npf.clean)
 y.ans <- npf.all.clean$class2
 x.ans.test <- as.matrix(npf_hidden_clean[,-1]) 
+
 
 #cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
 answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = 0.09)
