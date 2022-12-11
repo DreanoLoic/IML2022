@@ -365,7 +365,7 @@ Some methods include variable selection in itself, like Lasso and decision trees
 
 Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. As we can see from the histograms in the annex the variables are measured in different units and scales. To make sure that the magnitude of a variable does not give too much weight we use data that is normalized to have zero mean and scaled to have unit variance.
 
-The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in valdiation approach the selected lambda is
+The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in validation approach the selected lambda is
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
@@ -781,7 +781,7 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 
 In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
 
-To choose an optimal k different values of k are tried. Accuracy on the validation set for each of the selected k are calculated and are respectively 
+Different values of k are tried for for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
