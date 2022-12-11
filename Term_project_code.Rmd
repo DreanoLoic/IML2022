@@ -220,6 +220,8 @@ Performance measures are calculated using validation method and 10-fold Cross-Va
 
 Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. Since, a single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. The cross-validation procedure is repeated 100 times and the mean result across all folds from all runs are reported.
 
+The increase of repetition increase also the risk to get probabilities values of 1 or 0, in that case the calculation of the perplexity isn't possible. Thus, in order to get a finite number result, 1 values are transform to 0.999999999 and 0 values are transform to 0.000000001.
+
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 # which training set ? 
@@ -520,8 +522,13 @@ The importance of variables are:
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
+The picture above report the values of two variables:
+  -Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable. 
+  -Mean Decrease Gini (IncNodePurity) that is a measure of variable importance based on the Gini impurity index used for the calculating the splits in trees.
 
-We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+The higher the value of mean decrease Accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+
+
 --- we should add explanations to %incMSE and IncNodePurity and do some conclusions of the pictures
 
 The performance of the classifiers investigated so far are:
