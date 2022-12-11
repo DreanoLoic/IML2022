@@ -305,9 +305,7 @@ To see how many PCs are needed to explain more than 80 % of the variance the PVE
 #plot(pve, xlab = "Principal Component", ylab = "PVE", ylim =c(0,1), type ="b")
 #plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE", ylim =c(0,1), type ="b")
 
-
 plot_PVE <- function(p,n=length(p$sdev)) {
-# https://colorbrewer2.org/?type=qualitative&scheme=Dark2&n=3
 cols3 <- c("#1b9e77","#d95f02","#7570b3")
 PVE <- p$sdev[1:n]^2/sum(p$sdev^2)
 plot(c(1,length(PVE)),c(0,1),type="n",xlab="PC",ylab="",xaxt="n")
