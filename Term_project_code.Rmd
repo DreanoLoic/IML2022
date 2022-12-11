@@ -919,7 +919,7 @@ As we already concluded logistic regression with Lasso performs better than rand
 Naive Bayes with all 26 variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. 10-NN performance near the performance of Naive Bayes with PCA.
 
 As expected, the performance of dummy model is worst and is used only as a reference. 
---- This text needs to be updated after the codes are ready!!!
+--- This text needs to be updated after the codes are ready!
 
 According to the investigated performance measures logistic regression with Lasso is selected as a classifier.
 
@@ -930,11 +930,9 @@ We started by looking at the data and especially the correlations between variab
 
 According to the performance comparison we select logistic regression with Lasso as our classifier. It is used to normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso and reduced number of variables we also reduce the possibility of overfitting the model. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous result table that the performance measures of the model are pretty good.
 
---- should we repeat the performance of the selected model here?
-
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. In the table below shows the frequency of event types in the data when the event has happened. The type "II" has the highest frequency of 48,7 %.
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of 48,7 %.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
@@ -950,7 +948,8 @@ colnames(events_freq) <- c("frequency")
 kable(events_freq, digits =3)
 
 ```
-The accuracy to be added at the beginning of the answers.csv
+
+The accuracy is the cross-validatd accuracy calculated before and was added at the beginning of the answers.csv
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
