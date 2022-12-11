@@ -791,7 +791,7 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 
 In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
 
-Different values of k are tried for for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
+Different values of k are tried for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
