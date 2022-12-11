@@ -432,7 +432,7 @@ for (l in seq(CV.rep)){
 }
 
 #Performance measures into the table
-npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso scaled", 
+npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso", 
                                        round(accuracy(phat_LGLCV_train, class2_num_train),3), 
                                        round(accuracy(phat_LGLCV, class2_num),3), 
                                        round(mean(l.acc.LGLCV),3), 
@@ -456,23 +456,21 @@ Decision trees are learning methods that segment observations into regions. The 
 
 Random Forest builds a number of decision trees using each time a sample of training data, sampling done by bootstrapping. Predictions are averages of the resulting trees. During each split only one of the given number of randomly selected variables are considered. By reducing the number of variables the correlation between the trees is reduced.
 
-To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value 1 when an event has occurred and value 0 in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used square root of the number of variables in the data.
-
---- in case of classification tree the number of variables should be 26^0.5 and in regression 26/3 => I suppose we have regression now when using dummy response? That's why I changed the number from 5 to 9. Fix the text!!!
-
+To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value 1 when an event has occurred and value 0 in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used one third of the variables in the data in case of regression tree.
 
 Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 set.seed(42)
 npf_train.rf = npf_train
 npf_train.rf$class2=class2_num_train
+#in case of classification tree the number of variables should be 26^0.5 and in regression 26/3. Assuming we have regression because we are using dummy response, we choose 9 
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
-As we can see, no misclassification is done in training data. To see how well the model performs for validation set, we look at the confusion matrix for validation data set:
 
+As we can see, no misclassification is done in training data. To see how well the model performs on validation set, we look at the confusion matrix for validation data set:
 
 ```{r test for tree plot, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -519,6 +517,7 @@ phat_RF <- predict(rf.npf, newdata = npf_valid)
 
 kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
+
 There are 19 observations predicted to be nonevent even though the event has occurred and respectively 16 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -593,41 +592,44 @@ phat_Dummy_train <- Dummy_accuracy(npf_train$class2, train_main_value)
 phat_Dummy <- Dummy_accuracy(npf_valid$class2, train_main_value)
 
 #Cross-Validation
+
 l.acc.DummyCV = NULL
 l.perp.DummyCV = NULL
 for (l in seq(CV.rep)){
   split = split.CV(npf.all.clean,10)
 # Here is a data frame for each split to have the probability and the main event class
 # And it works! I didn't know how to use your other loop though for mean CV perplexity!
-  df_DummyCV <- data.frame(matrix(ncol = 2, nrow = 0))
+  df_DummyCV <- data.frame()
   for (i in 1:10){   
     ind.test = split[[i]]
     ind.all = unlist(split)
     ind.train = ind.all[!ind.all %in% ind.test]
     y <- npf.all.clean$class2[ind.train]
     train_main_value <- ifelse((length(y[y=="event"])/length(y))>=0.5, 'event','nonevent')
-    new <- c(Dummy_accuracy(y, train_main_value), train_main_value)
+    new <- c(as.numeric(Dummy_accuracy(y, train_main_value)), train_main_value)
     df_DummyCV <- rbind(df_DummyCV, new)
      # Dummy_accuracy(new, train_main_value)
     l.perp.DummyCV = c(l.perp.DummyCV,perplexity(Dummy_accuracy(y, train_main_value), train_main_value))
   }
   colnames(df_DummyCV) <-c("phat", "tmv")
-  as.numeric(df_DummyCV$phat)
-  phat_DummyCV <- mean(as.numeric(df_DummyCV$phat))
-  
+  df_DummyCV$phat=as.numeric(df_DummyCV$phat)
+  phat_DummyCV <- mean(df_DummyCV$phat)
+  perp_DummyCV <- perplexity(df_DummyCV$phat, df_DummyCV$tmv)
   l.acc.DummyCV = c(l.acc.DummyCV,phat_DummyCV)
-  # l.perp.DummyCV = c(l.perp.DummyCV,perplexity(phat_RF_CV,)
+  l.perp.DummyCV = c(l.perp.DummyCV,perp_DummyCV)
 }
+
 
 
 
 npf_results[nrow(npf_results)+1,] <- c("Dummy", 
                                        round(phat_Dummy_train,3), 
                                        round(phat_Dummy,3), 
-                                       round(mean(l.acc.DummyCV),3), 
+                                       round(phat_DummyCV,3), 
                                        round(perplexity(phat_Dummy_train, train_main_value),3), 
                                        round(perplexity(phat_Dummy, train_main_value),3),
                                        round(mean(l.perp.DummyCV),3))
+
 
 
 ```
@@ -635,7 +637,7 @@ npf_results[nrow(npf_results)+1,] <- c("Dummy",
 
 2) Naive Bayes
 
-Naive Bayes is a generative classifier which assumes that the variables in each class (event or nonevent) are independent. It can be assumed that this is not the case in NPF data, but Naive Bayes can still produce quite decent results.
+Naive Bayes is a generative classifier which assumes that the variables in each class (event or nonevent) are independent. It can be assumed that this is not the case in NPF data, but Naive Bayes can still produce quite decent results. Naive Bayes assumes that the variables are from Gaussian distribution. Thus, no scaling of the data is needed since it doesn't affect the predictions.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -758,35 +760,42 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 
 3) Logistic regression
 
-To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the 26 variables.
+To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the 26 variables. We use scaled data to avoid dominance of variables measured in high magnitudes.
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
-phat_LG <- function(npf_train,
-  npf_valid,
+phat_LG <- function(npf_train.scaled,
+  npf_valid.scaled,
   model = function(data) glm(class2 ~ ., data, family = "binomial"),
   pred = function(model, x) predict(model, newdata = x, type = "response")) {
-    m <- model(npf_train)
-    pred(m, npf_valid)
+    m <- model(npf_train.scaled)
+    pred(m, npf_valid.scaled)
 }
 
+npf_train.scaled <- data.frame(scale(npf_train[,-1]),class2=npf_train$class2)
+npf_valid.scaled <- data.frame(scale(npf_valid[,-1]),class2=npf_valid$class2)
+
 #Train
-phat_LG_train <- phat_LG(npf_train, npf_train)
+phat_LG_train <- phat_LG(npf_train.scaled, npf_train.scaled)
+
 #Test
-phat_LG <- phat_LG(npf_train, npf_valid)
+phat_LG <- phat_LG(npf_train.scaled, npf_valid.scaled)
+
+
+npf.all.clean.scaled <- data.frame(scale(npf.all.clean[,-1]),class2=npf.all.clean$class2)
 
 #Cross-Validation
 l.acc.LGCV = NULL
 l.perp.LGCV = NULL
 for (l in seq(CV.rep)){
-  split = split.CV(npf.all.clean,10)
+  split = split.CV(npf.all.clean.scaled,10)
   phat_LGCV <- c()
   for (i in 1:10){   
     ind.test = split[[i]]  
     ind.all = unlist(split)   
     ind.train = ind.all[!ind.all %in% ind.test]
-    mod <- glm(class2 ~ ., npf.all.clean[ind.train, ], family = "binomial")
-    phat_LGCV[ind.test]<- predict(mod, newdata = npf.all.clean[ind.test,], type = "response")
+    mod <- glm(class2 ~ ., npf.all.clean.scaled[ind.train, ], family = "binomial")
+    phat_LGCV[ind.test]<- predict(mod, newdata = npf.all.clean.scaled[ind.test,], type = "response")
   }
   l.acc.LGCV = c(l.acc.LGCV,accuracy(phat_LGCV, class2_num_all))
   l.perp.LGCV = c(l.perp.LGCV,perplexity(phat_LGCV, npf.all.clean$class2))
@@ -801,8 +810,11 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
                                        round(mean(l.perp.LGCV),3))
 ```
 
-4) k-NN
-K nearest neighbor is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on the  validation set for each of them are respectively
+4) k Nearest Neighbor (k-NN)
+
+In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
+
+To choose an optimal k different values of k are tried. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
@@ -829,7 +841,8 @@ knn.acc.table <- cbind(k, knn.acc)
 colnames(knn.acc.table)<-c("k", "accuracy")
 kable(knn.acc.table)
 ```
-When k = 5 or 10, the accuracy is highest. We add 10-NN as one of the methods since with a higher k the model is not so flexible and we can avoid overfitting.
+
+When k is 5 or 10, the accuracy is highest. To avoid overfitting we select k = 10 to be one of the methods to compare with other methods.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
@@ -899,13 +912,12 @@ npf_results[nrow(npf_results)+1,] <- c("10-NN",
                                        round(mean(l.perp.LGCV),3))
 ```
 
-
 Performance measures for the methods are:
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 kable(npf_results)
 ```
 
-As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all 26 variables performs surprisingly well but not as well as when variable selection is done with Lasso. 
+As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all 26 variables performs surprisingly well. However, perplexity is better when variable selection is done with Lasso. 
 
 Naive Bayes with all 26 variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. 10-NN performance near the performance of Naive Bayes with PCA.
 
@@ -917,11 +929,9 @@ According to the investigated performance measures logistic regression with Lass
 
 ## Summary
 
-We started by looking at the data and especially the correlations between variables. 
---- summary of data investigations should still be completed...
+We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of our models. We also noticed that the variables are measured in different units and scales. To avoid the variables with high magnitudes to dominate we used normalized and scaled data when appropriate.
 
---- The following text is just an example what to write if we happen to choose log reg with Lasso :)
-According to the performance comparison we select logistic regression with Lasso as our classifier. It gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method is the variable selection done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous table that the performance measures of the model are pretty good. 
+According to the performance comparison we select logistic regression with Lasso as our classifier. It is used to normalized and scaled data - if the scaling is not done the model will predict only events for testing data. The selected model gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso and reduced number of variables we also reduce the possibility of overfitting the model. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous result table that the performance measures of the model are pretty good.
 
 --- should we repeat the performance of the selected model here?
 
