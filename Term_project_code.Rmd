@@ -544,9 +544,9 @@ varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 The picture above report the values of two variables:
 
-  -Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable.
+  - Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable.
   
-  -Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
+  - Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
 
 The higher the value of mean decrease accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
 
