@@ -466,7 +466,7 @@ set.seed(42)
 
 npf_train.rf <- data.frame(scale(npf_train[,-1]),class2=npf_train$class2)
 npf_train.rf$class2=class2_num_train
-npf_valid.rf <- data.frame(scale(npf_valid[,-1]),class2=npf_valid$class2)
+npf_valid.rf <- data.frame(scale(npf_valid[,-1]),class2=class2_num)
 
 #in case of classification tree the number of variables should be 26^0.5 and in regression 26/3. Assuming we have regression because we are using dummy response, we choose 9 
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
@@ -481,17 +481,17 @@ As we can see, no missclassification is done in training data. To see how well t
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 phat_RF <- predict(rf.npf, newdata = npf_valid.rf)
 
-kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid.rf$class2))
+kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
 
-There are 20 observations predicted to be event even though no event has occurred and respectively 15 observations given the false prediction of nonevent. All together, the accuracy in validation set is 84,9 %.
+There are 20 observations predicted to be nonevent even though event has occurred and respectively 15 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
 # split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
 l.acc.RF_CV = NULL
 l.perp.RF_CV = NULL
-npf.all.clean.rf <- data.frame(scale(npf.all.clean[,-1]),class2=npf.all.clean$class2)
+npf.all.clean.rf <- data.frame(scale(npf.all.clean[,-1]),class2=class2_num_all)
 
 for (l in seq(CV.rep)){
   split = split.CV(npf.all.clean.rf,10)
@@ -509,9 +509,9 @@ for (l in seq(CV.rep)){
     # phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
   }
   l.acc.RF_CV = c(l.acc.RF_CV,accuracy(phat_RF_CV, class2_num_all))
-  l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
+  l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean.rf$class2))
 }
-l.perp.RF_CV=l.perp.RF_CV[-which(is.nan(l.perp.RF_CV))]
+#l.perp.RF_CV=l.perp.RF_CV[-which(is.nan(l.perp.RF_CV))]
 #Performance measures into the table
 npf_results[nrow(npf_results)+1,] <- c("Random Forest", 
                                        round(accuracy(phat_RF_train, class2_num_train),3), 
