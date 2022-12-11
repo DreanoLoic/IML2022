@@ -461,8 +461,11 @@ To get predictions of probabilities of event given the observations when using r
 Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 set.seed(42)
-npf_train.rf = npf_train
+
+npf_train.rf <- data.frame(scale(npf_train[,-1]),class2=npf_train$class2)
 npf_train.rf$class2=class2_num_train
+npf_valid.rf <- data.frame(scale(npf_valid[,-1]),class2=npf_valid$class2)
+
 #in case of classification tree the number of variables should be 26^0.5 and in regression 26/3. Assuming we have regression because we are using dummy response, we choose 9 
 rf.npf <- randomForest(class2~., data = npf_train.rf, mtry = 9, importance = TRUE)
 phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
@@ -474,12 +477,12 @@ As we can see, no missclassification is done in training data. To see how well t
 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
-phat_RF <- predict(rf.npf, newdata = npf_valid)
+phat_RF <- predict(rf.npf, newdata = npf_valid.rf)
 
-kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
+kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid.rf$class2))
 ```
 
-There are 19 observations predicted to be nonevent even though the event has occurred and respectively 16 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
+There are 20 observations predicted to be nonevent even though the event has occurred and respectively 15 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
