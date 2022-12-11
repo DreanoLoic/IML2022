@@ -539,6 +539,11 @@ The models tested in addition to the logistic regression with Lasso and random f
 
 1) Dummy
 
+Dummy classifier makes predictions based only on classes or labels and it ignores all the input features of the data. Even though it is not highly performing classifier, it is still a valuable feature as it is usually used as a baseline to compare the performance of the other methods.
+
+In this project the dummy classifier uses the most frequent class of the training set for the predictions. In another method the frequencies of the classes in a training data could be used as the probabilities for choosing between the classes. Some dummy classifiers does not even calculate the frequencies as they predict the classes randomly with a uniform distribution. 
+
+
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 # Finding out the main class in the training data
