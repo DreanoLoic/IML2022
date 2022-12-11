@@ -966,7 +966,7 @@ write.csv(answers, "C:\\Users\\sarir\\OneDrive\\Työpöytä\\Machine Learning OP
 #I just copy-pasted the accuracy at the beginning of the CSV file after exporting it...
 mean(l.acc.LGLCV)
 
-#For the final CSV we must run the lint.R
+#For the final CSV we must run the lint.R (code to use in the terminal: Rscript -- vanilla lint.R answers.csv)
 ```
 
 ## Annex: Histograms of variables
