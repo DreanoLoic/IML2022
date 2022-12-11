@@ -527,9 +527,8 @@ The picture above report the values of two variables:
   -Mean Decrease Gini (IncNodePurity) that is a measure of variable importance based on the Gini impurity index used for the calculating the splits in trees.
 
 The higher the value of mean decrease Accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
 
-
---- we should add explanations to %incMSE and IncNodePurity and do some conclusions of the pictures
 
 The performance of the classifiers investigated so far are:
 
@@ -544,6 +543,11 @@ Even though the accuracy of random forest in validation set is better than logis
 The models tested in addition to the logistic regression with Lasso and random forest are a dummy model, Naive Bayes with reduced dimensionality, logistic regression using all variables in cleaned data (to compare the results with the one with Lasso) and k nearest neighbor.
 
 1) Dummy
+
+Dummy classifier makes predictions based only on classes or labels and it ignores all the input features of the data. Even though it is not highly performing classifier, it is still a valuable feature as it is usually used as a baseline to compare the performance of the other methods.
+
+In this project the dummy classifier uses the most frequent class of the training set for the predictions. In another method the frequencies of the classes in a training data could be used as the probabilities for choosing between the classes. Some dummy classifiers does not even calculate the frequencies as they predict the classes randomly with a uniform distribution. 
+
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -879,6 +883,8 @@ npf_results[nrow(npf_results)+1,] <- c("10-NN",
                                        knn.perp_valid,
                                        round(mean(l.perp.LGCV),3))
 ```
+
+## Comparison of the methods
 
 Performance measures for the methods are:
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
