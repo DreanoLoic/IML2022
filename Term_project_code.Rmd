@@ -299,11 +299,24 @@ To see how many PCs are needed to explain more than 80 % of the variance the PVE
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-par(mfrow=c(1,2))
-pca.npf.var <- pca.npf$sdev^2
-pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "PVE", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE", ylim =c(0,1), type ="b")
+#par(mfrow=c(1,2))
+#pca.npf.var <- pca.npf$sdev^2
+#pve <- pca.npf.var/sum(pca.npf.var)
+#plot(pve, xlab = "Principal Component", ylab = "PVE", ylim =c(0,1), type ="b")
+#plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE", ylim =c(0,1), type ="b")
+
+plot_PVE <- function(p,n=length(p$sdev)) {
+cols3 <- c("#1b9e77","#d95f02","#7570b3")
+PVE <- p$sdev[1:n]^2/sum(p$sdev^2)
+plot(c(1,length(PVE)),c(0,1),type="n",xlab="PC",ylab="",xaxt="n")
+axis(1,at=1:length(PVE))
+lines(cumsum(PVE),type="b",col=cols3[1])
+lines(PVE,type="b",col=cols3[2],lty="dashed",pch=3)
+legend("right",c("cumulative PVE","PVE"),col=cols3[1:2],lty=c("solid","dashed"),pch=c(1,3))
+}
+plot_PVE(pca.npf)
+
+
 ```
 
 For the original data we would need 10-20 PCs to explain most of the variance.
@@ -347,11 +360,13 @@ The loading vectors are not as overlapped as previously but the PVE is still qui
 Again, PVE by each principal component and the cumulative PVE are investigated:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-par(mfrow=c(1,2))
-pca.npf.var <- pca.npf.clean$sdev^2
-pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "PVE, cleaned data", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE, cleaned data", ylim =c(0,1), type ="b")
+#par(mfrow=c(1,2))
+#pca.npf.var <- pca.npf.clean$sdev^2
+#pve <- pca.npf.var/sum(pca.npf.var)
+#plot(pve, xlab = "Principal Component", ylab = "PVE, cleaned data", ylim =c(0,1), type ="b")
+#plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE, cleaned data", ylim =c(0,1), type ="b")
+
+plot_PVE(pca.npf.clean)
 
 ```
 
@@ -367,7 +382,7 @@ Some methods include variable selection in itself, like Lasso and decision trees
 
 Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. As we can see from the histograms in the annex the variables are measured in different units and scales. To make sure that the magnitude of a variable does not give too much weight we use data that is normalized to have zero mean and scaled to have unit variance.
 
-The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in valdiation approach the selected lambda is
+The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in validation approach the selected lambda is
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
@@ -529,11 +544,9 @@ varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 The picture above report the values of two variables:
   -Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable. 
-  -Mean Decrease Gini (IncNodePurity) that is a measure of variable importance based on the Gini impurity index used for the calculating the splits in trees.
+  -Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
 
 The higher the value of mean decrease Accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
-We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
-
 
 The performance of the classifiers investigated so far are:
 
@@ -791,8 +804,7 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 
 In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
 
-To choose an optimal k different values of k are tried. Accuracy on the validation set for each of the selected k are calculated and are respectively 
-
+Different values of k are tried for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
@@ -914,7 +926,7 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of 48,7 %.
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same type that occurs mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of 48,7 %.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
@@ -931,7 +943,7 @@ kable(events_freq, digits =3)
 
 ```
 
-The accuracy is the cross-validatd accuracy calculated above and is added at the beginning of the answers.csv after exporting the file with predicted classes and probabilities.
+The accuracy is the cross-validated accuracy calculated above and is added at the beginning of the answers.csv after exporting the file with predicted classes and probabilities.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
