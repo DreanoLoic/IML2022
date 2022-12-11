@@ -21,7 +21,7 @@ library(tree)
 library(glmnet)
 library(corrplot)
 library(rstatix)
-library(reprtree)
+#library(reprtree)
 opts_chunk$set(echo = TRUE)
 #Value of repetion of CV
 CV.rep=100
@@ -214,11 +214,6 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of 2 corresponds to coin flipping.
 
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-#For Random Forest and decision tree perplexity is not calculated but instead ROC curves are looked at.
-#---- Did we agree on this? :) ROC should still be added to code below
-```
-
 If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
 
 Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
@@ -226,7 +221,6 @@ Performance measures are calculated using validation method and 10-fold Cross-Va
 Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. The performance measures are the means of the 10 validation results.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
-
 
 # which training set ? 
 npf.all.clean = cbind(class2=npf.var$class2,npf.clean) # data without correlated for class2
@@ -296,7 +290,8 @@ autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)
 ```
 
 The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only 39.61 % of the variance in the data and the second PC (PC2) 14,95 %. Together they explain only 54,56 % of the variance which is quite poor result the target being more than 80 %.
----Can we conclude from the picture above if there are any significant outliers?
+
+From the biplot we can also see that there are a couple of outliers in the bottom right corners. For now, we leave them to be and handle them during modelling if needed.
 
 To see how many PCs are needed to explain more than 80 % of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
 
@@ -368,7 +363,7 @@ Some methods include variable selection in itself, like Lasso and decision trees
 
 1) Logistic regression with Lasso
 
-Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. The lambda is
+Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example when using valdiation approach, the lambda is
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
@@ -420,7 +415,9 @@ for (l in seq(CV.rep)){
     x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
     y <- npf.all.clean$class2[ind.train]
     x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
-    mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
+    
+    cv.lambda.i <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
+    mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda.i)
     phat_LGLCV_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
   }
   l.acc.LGLCV=c(l.acc.LGLCV,accuracy(phat_LGLCV_CV, class2_num_all))
@@ -438,7 +435,7 @@ npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso",
 round(cv.lambda,3)
 ```
 
-The estimated coefficients with the selected lambda are
+The estimated coefficients with the selected lambda in training data (with 232 observations) are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
@@ -503,7 +500,7 @@ As we can see, no misclassification is done in training data. To see how well th
   # labelYN(x)
   title(main=main)
  }
- plot.getTree(rf.npf,k=9)
+ #plot.getTree(rf.npf,k=9)
 
  
  
@@ -566,11 +563,11 @@ The performance of the classifiers investigated so far are:
 kable(npf_results)
 ```
 
-Even though the accuracy of random forest in training and validation set is better than logistic regression with Lasso the performance estimated by cross-validation is not as good. Especially, perplexity of logistic regression with Lasso in validation set and cross-validation is better than of random forest.
+Even though the accuracy of random forest in validation set is better than logistic regression with Lasso the performance estimated by cross-validation is poor. Especially, cross-validated perplexity of logistic regression with Lasso seems to be very good.
 
 ## Other models
 
-The models tested in addition to the logistic regression with Lasso and random forest are a dummy model, Naive Bayes using reduced dimensionality, logistic regression using all variables in cleaned data (to compare the results) and k nearest neighbor.
+The models tested in addition to the logistic regression with Lasso and random forest are a dummy model, Naive Bayes with reduced dimensionality, logistic regression using all variables in cleaned data (to compare the results with the one with Lasso) and k nearest neighbor.
 
 1) Dummy
 
@@ -820,14 +817,18 @@ for (i in c(1, 5, 10, 15, 20, 50)){
   knn.Y_num <- ifelse(knn.Y=="event",1,0)
   knn.acc[j] <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
 }
-knn.acc
+
+k<-c("1", "5", "10", "15","20","50")
+knn.acc.table <- cbind(k, knn.acc)
+colnames(knn.acc.table)<-c("k", "accuracy")
+kable(knn.acc.table)
 ```
-When k = 5 (or 10), the accuracy is highest so 5-NN is added
+When k = 5 or 10, the accuracy is highest. We add 10-NN as one of the methods since with a higher k the model is not so flexible and we can avoid overfitting.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
 set.seed(42)
-k_sel <- c(5)
+k_sel <- c(10)
 train.X <- scale(npf_train[,-1])
 valid.X <- scale(npf_valid[,-1])
 train.Y <- npf_train$class2
@@ -841,14 +842,20 @@ p.knn_train[ind.no_train] = 1-p.knn_train[ind.no_train]
 
 knn.Y_train_num <- ifelse(knn.Y_train=="event",1,0)
 knn.acc_train <- round(mean(ifelse(knn.Y_train_num==class2_num_train,1,0)),3)
-accuracy(p.knn_train,ifelse(train.Y=="event",1,0))
-perplexity(p.knn_train,train.Y)
+#the accuracy above is not the same as this:
+#accuracy(p.knn_train,ifelse(train.Y=="event",1,0))
+knn.perp_train <- round(perplexity(p.knn_train,train.Y),3)
 
 
 #Validation
 knn.Y <- knn(train.X, valid.X, train.Y, k=k_sel,prob = T)
+p.knn = attributes(knn.Y)$prob
+ind.no_valid = which(knn.Y=="nonevent")
+p.knn[ind.no_valid] = 1-p.knn[ind.no_valid]
+
 knn.Y_num <- ifelse(knn.Y=="event",1,0)
 knn.acc_valid <- round(mean(ifelse(knn.Y_num==class2_num,1,0)),3)
+knn.perp_valid <- round(perplexity(p.knn,valid.Y),3)
 
 #Cross-Validation predictions of the class
 l.acc.LGCV = NULL
@@ -877,12 +884,12 @@ for (l in seq(CV.rep)){
   l.perp.LGCV= c(l.perp.LGCV,knn.perp_CV)
 }
 
-npf_results[nrow(npf_results)+1,] <- c("5-NN", 
+npf_results[nrow(npf_results)+1,] <- c("10-NN", 
                                        knn.acc_train, 
                                        knn.acc_valid,
                                        round(mean(l.acc.LGCV),3),
-                                       "",
-                                       "",
+                                       knn.perp_train,
+                                       knn.perp_valid,
                                        round(mean(l.perp.LGCV),3))
 ```
 
@@ -892,8 +899,14 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
-As we already concluded logistic regression with Lasso seems to perform slightly better than random forest. Naive Bayes with all 26 variables performs poorly producing infinitive perplexity in validation data. When the dimensionality is reduced using PCA the performance improves significantly but does not outperform logistic regression with Lasso. As expected, the performance of dummy model is worst and is used only as a reference. 
+As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all 26 variables performs surprisingly well but not as well as when variable selection is done with Lasso. 
+
+Naive Bayes with all 26 variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. 10-NN performance near the performance of Naive Bayes with PCA.
+
+As expected, the performance of dummy model is worst and is used only as a reference. 
 --- This text needs to be updated after the codes are ready!!!
+
+According to the investigated performance measures logistic regression with Lasso is selected as a classifier.
 
 
 ## Summary
@@ -908,28 +921,27 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type occured most often in the training data. That is the type "II" with the proportion of 48,7 % the others being 14,7 % for the type "Ia" and 36,6 % for type "Ib".
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. In the table below shows the frequency of event types in the data when the event has happened. The type "II" has the highest frequency of 48,7 %.
 
-```{r, message=FALSE, echo=FALSE,warning=FALSE, eval = FALSE}
-
+```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
 # The frequency of the events classes in the training data, needs npf.var table
 events_classes <- c("Ia", "Ib", "II")
 events_freq <- c()
 for (i in 1:length(events_classes)){
-events_freq[i] <- length(npf.var$class4[npf.var$class4==events_classes[i]])/length(npf.var$class4[npf.var$class4!="nonevent"])  
+  events_freq[i] <- length(npf.var$class4[npf.var$class4==events_classes[i]])/length(npf.var$class4[npf.var$class4!="nonevent"])  
 }
 names(events_freq) <- events_classes
-
-
+kable(events_freq)
+```
+```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 npf_hidden_clean$class2 = NA
-x.ans <- as.matrix(npf.clean)
+x.ans <- scale(as.matrix(npf.clean))
 y.ans <- npf.all.clean$class2
-x.ans.test <- as.matrix(npf_hidden_clean[,-1]) 
+x.ans.test <- scale(as.matrix(npf_hidden_clean[,-1]))
 
-
-#cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
-answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = 0.09)
+cv.lambda.ans <- cv.glmnet(x.ans, y.ans, family = "binomial", alpha = 1)$lambda.min
+answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv.lambda.ans)
 
 p <- predict(answer.model, newx = x.ans.test, type = "response")
 class4 <- ifelse(p>0.5,"II", "nonevent")
