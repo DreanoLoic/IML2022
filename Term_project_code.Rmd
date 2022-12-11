@@ -527,8 +527,6 @@ The picture above report the values of two variables:
   -Mean Decrease Gini (IncNodePurity) that is a measure of variable importance based on the Gini impurity index used for the calculating the splits in trees.
 
 The higher the value of mean decrease Accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
-We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
-
 
 The performance of the classifiers investigated so far are:
 
