@@ -791,7 +791,6 @@ In k-NN the closest k training data points to the observation are selected and t
 
 Different values of k are tried for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
-
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
 set.seed(42)
