@@ -218,7 +218,7 @@ If the method predicts a probability of an event, observation is classified as "
 
 Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
 
-Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. The performance measures are the means of the 10 validation results.
+Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. This process is repeated 100, The performance measures are the means of the 10 validation results over the 100 repetitions. 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
