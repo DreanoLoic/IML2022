@@ -949,7 +949,7 @@ kable(events_freq, digits =3)
 
 ```
 
-The accuracy is the cross-validatd accuracy calculated before and was added at the beginning of the answers.csv
+The accuracy is the cross-validatd accuracy calculated above and is added at the beginning of the answers.csv after exporting the file with predicted classes and probabilities.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
