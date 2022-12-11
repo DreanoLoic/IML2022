@@ -484,15 +484,17 @@ phat_RF <- predict(rf.npf, newdata = npf_valid.rf)
 kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid.rf$class2))
 ```
 
-There are 20 observations predicted to be nonevent even though the event has occurred and respectively 15 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
+There are 20 observations predicted to be event even though no event has occurred and respectively 15 observations given the false prediction of nonevent. All together, the accuracy in validation set is 84,9 %.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
 # split <- c(rep_len(1:10, length.out = nrow(npf.all.clean)))
 l.acc.RF_CV = NULL
 l.perp.RF_CV = NULL
+npf.all.clean.rf <- data.frame(scale(npf.all.clean[,-1]),class2=npf.all.clean$class2)
+
 for (l in seq(CV.rep)){
-  split = split.CV(npf_train.rf,10)
+  split = split.CV(npf.all.clean.rf,10)
   phat_RF_CV <- c()
   for (i in 1:10){
     ind.test = split[[i]]
@@ -500,8 +502,8 @@ for (l in seq(CV.rep)){
     ind.train = ind.all[!ind.all %in% ind.test]
     # x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
     # y <- npf.all.clean$class2[ind.train]
-    rf.npf_CV <- randomForest(class2~., data = npf_train.rf[ind.train,], mtry = 9, importance = TRUE)
-    phat_RF_CV<- predict(rf.npf_CV, newdata = npf_train.rf[ind.test,])
+    rf.npf_CV <- randomForest(class2~., data = npf.all.clean.rf[ind.train,], mtry = 9, importance = TRUE)
+    phat_RF_CV<- predict(rf.npf_CV, newdata = npf.all.clean.rf[ind.test,])
     # x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
     # mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
     # phat_RF_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
