@@ -218,7 +218,7 @@ If the method predicts a probability of an event, observation is classified as "
 
 Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
 
-Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. The performance measures are the means of the 10 validation results.
+Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. Since, a single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. The cross-validation procedure is repeated 100 times and the mean result across all folds from all runs are reported.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -470,47 +470,8 @@ phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
 
-As we can see, no misclassification is done in training data. To see how well the model performs on validation set, we look at the confusion matrix for validation data set:
+As we can see, no missclassification is done in training data. To see how well the model performs on validation set, we look at the confusion matrix for validation data set:
 
-```{r test for tree plot, message=FALSE,warning=FALSE, echo=FALSE}
-
- plot.getTree <- function(rforest=NULL,tr=NULL,k=1, depth=0,main=NULL,caret=F, ...){
-  require(randomForest)
-  if(caret){
-    mod<-rforest
-    rforest<-mod$finalModel
-  }
-  
-  if(is.null(rforest) && is.null(tr))stop('One of a random forest object or a tree object must be input')
-  if(!is.null(rforest)){
-    gTree <- getTree(rforest, k=k, labelVar=TRUE)
-    
-    if(caret){
-      x <- as.tree(gTree, mod, caret=T)
-    }
-    else{
-      x <- as.tree(gTree, rforest)
-    }
-    
-  } else {
-    x <- tr
-  }
-  if(depth>0){
-    x <- snip.depth(x,depth)
-  }
-  x
-  plot(x, type='uniform')
-  text(x)
-  # labelBG(x)
-  # labelYN(x)
-  title(main=main)
- }
- #plot.getTree(rf.npf,k=9)
-
- 
- 
-
-```
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 phat_RF <- predict(rf.npf, newdata = npf_valid)
