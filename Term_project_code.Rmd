@@ -363,7 +363,9 @@ Some methods include variable selection in itself, like Lasso and decision trees
 
 1) Logistic regression with Lasso
 
-Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example when using valdiation approach, the lambda is
+Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. As we can see from the histograms in the annex the variables are measured in different units and scales. To make sure that the magnitude of a variable does not give too much weight we use data that is normalized to have zero mean and scaled to have unit variance.
+
+The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in valdiation approach the selected lambda is
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
@@ -389,9 +391,12 @@ split.CV = function(Mat,nbG){
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
 set.seed(42)
-x <- model.matrix(class2 ~., npf_train)[,-1]
+#x <- model.matrix(class2 ~., npf_train)[,-1]
+#x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+
+x <- scale(as.matrix(npf_train[,-1]))
 y <- npf_train$class2
-x.test <- model.matrix(class2 ~., npf_valid)[,-1]
+x.test <- scale(as.matrix(npf_valid[,-1]))
 
 cv.lambda <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
 m.lassoCV <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda)
@@ -412,10 +417,12 @@ for (l in seq(CV.rep)){
     ind.test = split[[i]]
     ind.all = unlist(split)
     ind.train = ind.all[!ind.all %in% ind.test]
-    x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+    #x <- model.matrix(class2 ~., npf.all.clean[ind.train,])[,-1]
+    x <- scale(as.matrix(npf.all.clean[ind.train,-1]))
     y <- npf.all.clean$class2[ind.train]
-    x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
-    
+    #x.test <- model.matrix(class2 ~., npf.all.clean[ind.test,])[,-1]
+    x.test <- scale(as.matrix(npf.all.clean[ind.test,-1]))
+      
     cv.lambda.i <- cv.glmnet(x, y, family = "binomial", alpha = 1)$lambda.min
     mod <- glmnet(x, y, family = "binomial", alpha = 1, lambda = cv.lambda.i)
     phat_LGLCV_CV[ind.test]<- predict(mod, newx = x.test, type = "response")
@@ -425,7 +432,7 @@ for (l in seq(CV.rep)){
 }
 
 #Performance measures into the table
-npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso", 
+npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso scaled", 
                                        round(accuracy(phat_LGLCV_train, class2_num_train),3), 
                                        round(accuracy(phat_LGLCV, class2_num),3), 
                                        round(mean(l.acc.LGLCV),3), 
@@ -441,7 +448,7 @@ The estimated coefficients with the selected lambda in training data (with 232 o
 m.lassoCV %>% tidy() %>% kable(digits = 3)
 #coef(m.lassoCV)
 ```
-As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and many of them are close to zero. Only 4 variables (CS.mean, CS.std, PTG.std and NO168.std) have a value significantly higher than zero.  
+As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and some of them are still close to zero. 
 
 2) Random Forest
 
@@ -932,10 +939,15 @@ for (i in 1:length(events_classes)){
   events_freq[i] <- length(npf.var$class4[npf.var$class4==events_classes[i]])/length(npf.var$class4[npf.var$class4!="nonevent"])  
 }
 names(events_freq) <- events_classes
-kable(events_freq)
+events_freq <- as.data.frame(events_freq)
+colnames(events_freq) <- c("frequency")
+kable(events_freq, digits =3)
+
 ```
+The accuracy to be added at the beginning of the answers.csv
+
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
-npf_hidden_clean$class2 = NA
+
 x.ans <- scale(as.matrix(npf.clean))
 y.ans <- npf.all.clean$class2
 x.ans.test <- scale(as.matrix(npf_hidden_clean[,-1]))
@@ -946,12 +958,15 @@ answer.model <- glmnet(x.ans, y.ans, family = "binomial", alpha = 1, lambda = cv
 p <- predict(answer.model, newx = x.ans.test, type = "response")
 class4 <- ifelse(p>0.5,"II", "nonevent")
 
-answer <- data.frame(class4, p)
-colnames(answer) <- c("class4", "p")
-#CV Accuracy should be the same already calculated - it should be added at the beginning of the data frame "answer"
+answers <- data.frame(class4, p)
+colnames(answers) <- c("class4", "p")
 
-#write.csv(answer, "C:\\...path name...\\answer.csv", row.names = FALSE)
+write.csv(answers, "C:\\Users\\sarir\\OneDrive\\Työpöytä\\Machine Learning OPISKELU\\HY\\Term project\\IML2022\\answers.csv", row.names = FALSE)
 
+#I just copy-pasted the accuracy at the beginning of the CSV file after exporting it...
+mean(l.acc.LGLCV)
+
+#For the final CSV we must run the lint.R
 ```
 
 ## Annex: Histograms of variables
