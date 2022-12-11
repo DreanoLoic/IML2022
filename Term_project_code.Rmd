@@ -874,6 +874,8 @@ npf_results[nrow(npf_results)+1,] <- c("10-NN",
                                        round(mean(l.perp.LGCV),3))
 ```
 
+## Comparison of the methods
+
 Performance measures for the methods are:
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 kable(npf_results)
