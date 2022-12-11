@@ -807,9 +807,11 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
                                        round(mean(l.perp.LGCV),3))
 ```
 
-4) k-NN
+4) k Nearest Neighbor (k-NN)
 
-Scaled data is used. K nearest neighbor is tried with different values of k: 1, 5, 10, 15, 20 and 50. Accuracy on the  validation set for each of them are respectively
+In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
+
+To choose an optimal k different values of k are tried. Accuracy on the validation set for each of the selected k are calculated and are respectively 
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
@@ -837,7 +839,7 @@ colnames(knn.acc.table)<-c("k", "accuracy")
 kable(knn.acc.table)
 ```
 
-When k = 5 or 10, the accuracy is highest. We add 10-NN as one of the methods since with a higher k the model is not so flexible and we can avoid overfitting.
+When k is 5 or 10, the accuracy is highest. To avoid overfitting we select k = 10 to be one of the methods to compare with other methods.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
