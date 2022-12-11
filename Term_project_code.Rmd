@@ -922,22 +922,20 @@ As we already concluded logistic regression with Lasso performs better than rand
 Naive Bayes with all 26 variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. 10-NN performance near the performance of Naive Bayes with PCA.
 
 As expected, the performance of dummy model is worst and is used only as a reference. 
---- This text needs to be updated after the codes are ready!!!
+--- This text needs to be updated after the codes are ready!
 
 According to the investigated performance measures logistic regression with Lasso is selected as a classifier.
 
 
 ## Summary
 
-We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of our models. We also noticed that the variables are measured in different units and scales. To avoid the variables with high magnitudes to dominate we used normalized and scaled data when appropriate.
+We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of the models. We investigated  the importance of the variables left in the data by principal component analysis. The analysis showed that dimensionality could still be somewhat reduced. In stead of further selecting a subset of the 26 variables we used methods which included features of variable selection, like Lasso combined with logistic regression and dimensionality reduction through PCs combined with Naive Bayes. When appropriate we used scaled data to avoid the variables with high magnitudes to dominate the model fitting and predictions. 
 
-According to the performance comparison we select logistic regression with Lasso as our classifier. It is used to normalized and scaled data - if the scaling is not done the model will predict only events for testing data. The selected model gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso and reduced number of variables we also reduce the possibility of overfitting the model. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous result table that the performance measures of the model are pretty good.
-
---- should we repeat the performance of the selected model here?
+According to the performance comparison we select logistic regression with Lasso as our classifier. It is used to normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso and reduced number of variables we also reduce the possibility of overfitting the model. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous result table that the performance measures of the model are pretty good.
 
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. In the table below shows the frequency of event types in the data when the event has happened. The type "II" has the highest frequency of 48,7 %.
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same as the type that occure mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of 48,7 %.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
@@ -953,7 +951,8 @@ colnames(events_freq) <- c("frequency")
 kable(events_freq, digits =3)
 
 ```
-The accuracy to be added at the beginning of the answers.csv
+
+The accuracy is the cross-validatd accuracy calculated above and is added at the beginning of the answers.csv after exporting the file with predicted classes and probabilities.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
@@ -1010,153 +1009,5 @@ train_id <- sample(1:nrow(npf), 232)
 npf_train <- npf.all.clean[train_id,]
 npf_valid <- npf.all.clean[-train_id,]
 
-
-```
-
-
-## END
-
-## Some testing and old codes (keep or remove?)
-
-## Testing the CV code
-
-if perplexity should be calculated in each iteration in CV and take an average of the 10 results. Test is done to logistic regression on selected data. CV Perplexity in the result table is 1.274 and now the result is
-```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE,eval=FALSE}
-
-split <- c(rep_len(1:10, length.out = nrow(npf_trimmed)))
-
-perplexity_testi <- c()
-
-for (i in 1:10){
-  phat_testi <- c()
-  mod <- glm(class2 ~ ., npf_trimmed[ind.train, ], family = "binomial")
-  phat_testi<- predict(mod, newdata = npf_trimmed[ind.test,], type = "response")
-  perplexity_testi[i] <- perplexity(phat_testi, npf_trimmed$class2[ind.test])
-}
-
-sum(perplexity_testi)/10
-
-```
-
-## Should we remove this old chapter: Conclusions and feature selection
-
---- !!! This whole part can be removed if it's not needed. The text is not updated after cleaning the data so at least the conclusions should be updated. The models in the next session is set to use cleaned data instead of the selection previously done here. !!!
-
-The accuracy is best for Random Forest, but also Logistic Regression with Lasso where lambda is selected using CV ("log reg CV") performs very well.
----- Should we investigate diagnostic plots for log reg? Should be give weight to well performed classifiers when selecting the variables?
-
-All models use the following variables 
-- RHIRGA: mean is more important than std according to tree and RF
-- H2O mean
-- O3 mean (Logistic Regression with Lasso, lambda = CV ("log reg CV") gives small value to std)
-- CO2: tree and RF uses only std, log regs give value to mean too
-- T std
-- SWS.mean 
-
-The following variables are used in all other models but RF
-- NO.std
-- Pamb0.mean or .std
-
-The following variables are used in all other models but "normal" tree
-- CS.mean (.std only in log reg CV)
-
-These variables are used in some models
-- UV_B.std is used only on log reg CV 
-- UV_A.mean is used only in RF
-- RGlob.mean and RGlob.std (RF, mean also in log reg 0.1)
-- PTG.std (tree, RF)
-- NET.mean
-- RPAR.mean
-- SO2
-
-Because the measures in different heights/levels are highly correlated, we select just one of them.
----- which ones? Should we put more weight to the selections in random forest and log reg CV?
----- Should be produce boxplots, histograms and/or scatterplots to selected variables
-
-We select the following variables to be used in models:
----- selected for testing the same variables than in Log Reg Lasso CV but only once if there are multiple values with different heights ------------
-```{r, message=FALSE,warning=FALSE, echo=FALSE}
-#selection <- c("class2", "CO2168.std", "CO242.mean", "H2O42.mean", "NO168.std", "O3504.mean", "O3168.std", "Pamb0.std", "RHIRGA504.mean", "RHIRGA672.std", "SO2168.std", "SWS.mean", "T672.std", "UV_B.std", "CS.mean", "CS.std")
-  #c("class2", "CO2168.mean","CO2168.std", "Glob.mean", "H2O168.mean", "H2O168.std", "NO168.std", "O3168.mean", "Pamb0.mean", "Pamb0.std", "PTG.std", "RGlob.mean", "RHIRGA168.mean", "RHIRGA168.std", "SWS.mean", "T168.std", "CS.mean", "CS.std")
-#npf_train_trimmed <- npf_train[, colnames(npf_train) %in% selection]
-#npf_valid_trimmed <- npf_valid[, colnames(npf_train) %in% selection]
-#npf_trimmed <- npf[, colnames(npf) %in% selection]
-#selection
-```
-
-Let's check if there are any correlation left:
-
-```{r, message=FALSE, warning=FALSE,echo=FALSE}
-#cm <- cor(npf_trimmed[,-16])
-#colnames(cm) <- rownames(cm) <- sapply(colnames(cm), function(s) gsub(".mean","",s))
-#corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black")
-```
-
-## Do we remove this: A basic decision tree
-
-2) A classification tree selects the following variables with the misclassification as follows
-
-```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
-
-set.seed(42)
-tree.npf <- tree(class2~., npf_train)
-summary(tree.npf) 
-kable(summary(tree.npf)$used,col.names = "Variables")
-```
-
-```{r, message=FALSE,warning=FALSE, echo=FALSE, eval=FALSE}
-plot(tree.npf)
-text(tree.npf, pretty = 0, cex=0.6)
-```
-Accuracy of the tree can be calculated from the confusion matrix. Predicted classes vs. actual classes for validation data:
-
-```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
-tree.pred <- predict(tree.npf, npf_valid, type = "class")
-kable(table(tree.pred, npf_valid$class2))
-```
-Predicted classes vs. actual classes for training data:
---- this can actually be seen from the results above (summary(tree.npf)) - do we want to leave this confusion matrix away?
-
-```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
-tree.pred_train <- predict(tree.npf, npf_train, type = "class")
-kable(table(tree.pred_train, npf_train$class2))
-```
-The accuracies are respectively
-```{r, message=FALSE,warning=FALSE, echo=FALSE, eval = FALSE}
-acc_tree <- (113+107)/232
-acc_tree_train <- (104+94)/232
-npf_results[nrow(npf_results)+1,] <- c("Tree", round(acc_tree_train,3), round(acc_tree,3), "","","","")
-round(acc_tree,3)
-round(acc_tree_train,3)
-```
-
-## Do we need the CV-code from problem 2?
-
-```{r, message=FALSE, warning=FALSE,echo=FALSE, eval = FALSE}
-#this is CV function from Problem 2 is below but I have not used it since both NB and logistic regression needs some modifications...
-#Cross-Validation Predictions
-#1) split n items into k fold of roughly equal size
-kpart <- function(n,k){rep_len(1:k, lenght.out=n)}
-#2) find cross-validation predictions
-cv <- function(
-    formula,
-    data,
-    model = lm,
-    n = nrow(data),
-    k = min(n, 10),
-    split = kpart(n,k),
-    train = function(data){model(formula, data = data)},
-    pred = function(model, data){predict(model, newdata = data)}){
-  phat <- NULL
-  for (i in 1:k){
-    mod <- train(data[ind.train, ])
-    if (is.null(phat)){
-      phat <- pred(mod, data)
-    } else {
-      phat[ind.test]<- pred(mod, data[ind.test,])
-    }
-  }
-  phat
-}
 
 ```
