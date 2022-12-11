@@ -543,10 +543,12 @@ The importance of variables are:
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 The picture above report the values of two variables:
-  -Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable. 
+
+  -Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable.
+  
   -Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
 
-The higher the value of mean decrease Accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+The higher the value of mean decrease accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
 
 The performance of the classifiers investigated so far are:
 
@@ -564,7 +566,7 @@ The models tested in addition to the logistic regression with Lasso and random f
 
 Dummy classifier makes predictions based only on classes or labels and it ignores all the input features of the data. Even though it is not highly performing classifier, it is still a valuable feature as it is usually used as a baseline to compare the performance of the other methods.
 
-In this project the dummy classifier uses the most frequent class of the training set for the predictions. In another method the frequencies of the classes in a training data could be used as the probabilities for choosing between the classes. Some dummy classifiers does not even calculate the frequencies as they predict the classes randomly with a uniform distribution. 
+In this project the dummy classifier uses the most frequent class of the training set for the predictions. In another method the frequencies of the classes in a training data could be used as the probabilities for choosing between the classes. Some dummy classifiers does not even calculate the frequencies as they predict the classes randomly using a uniform distribution. 
 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -910,7 +912,7 @@ kable(npf_results)
 
 As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all ${26}$ variables performs surprisingly well. However, perplexity is better when variable selection is done with Lasso. 
 
-Naive Bayes with all ${26}$ variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. The ${10}$-NN performance is close to the performance of Naive Bayes with PCA.
+Naive Bayes with all ${26}$ variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. The ${10}$-NN is close to the performance of Naive Bayes with PCA.
 
 As expected, the performance of dummy model is worst and is used only as a reference. 
 
