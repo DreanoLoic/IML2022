@@ -360,11 +360,13 @@ The loading vectors are not as overlapped as previously but the PVE is still qui
 Again, PVE by each principal component and the cumulative PVE are investigated:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
-par(mfrow=c(1,2))
-pca.npf.var <- pca.npf.clean$sdev^2
-pve <- pca.npf.var/sum(pca.npf.var)
-plot(pve, xlab = "Principal Component", ylab = "PVE, cleaned data", ylim =c(0,1), type ="b")
-plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE, cleaned data", ylim =c(0,1), type ="b")
+#par(mfrow=c(1,2))
+#pca.npf.var <- pca.npf.clean$sdev^2
+#pve <- pca.npf.var/sum(pca.npf.var)
+#plot(pve, xlab = "Principal Component", ylab = "PVE, cleaned data", ylim =c(0,1), type ="b")
+#plot(cumsum(pve), xlab = "Principal Component", ylab = "Cumulative PVE, cleaned data", ylim =c(0,1), type ="b")
+
+plot_PVE(pca.npf.clean)
 
 ```
 
