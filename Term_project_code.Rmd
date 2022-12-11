@@ -592,42 +592,41 @@ phat_Dummy_train <- Dummy_accuracy(npf_train$class2, train_main_value)
 phat_Dummy <- Dummy_accuracy(npf_valid$class2, train_main_value)
 
 #Cross-Validation
-l.acc.DummyCV = NULL
-l.perp.DummyCV = NULL
-for (l in seq(CV.rep)){
-  split = split.CV
+#l.acc.DummyCV = NULL
+#l.perp.DummyCV = NULL
+#for (l in seq(CV.rep)){
+  split = split.CV(npf.all.clean,10)
 # Here is a data frame for each split to have the probability and the main event class
 # And it works! I didn't know how to use your other loop though for mean CV perplexity!
-  df_DummyCV <- data.frame(matrix(ncol = 2, nrow = 0))
+  df_DummyCV <- data.frame()
   for (i in 1:10){   
     ind.test = split[[i]]
     ind.all = unlist(split)
     ind.train = ind.all[!ind.all %in% ind.test]
     y <- npf.all.clean$class2[ind.train]
     train_main_value <- ifelse((length(y[y=="event"])/length(y))>=0.5, 'event','nonevent')
-    new <- c(Dummy_accuracy(y, train_main_value), train_main_value)
+    new <- c(as.numeric(Dummy_accuracy(y, train_main_value)), train_main_value)
     df_DummyCV <- rbind(df_DummyCV, new)
   }
   colnames(df_DummyCV) <-c("phat", "tmv")
-  as.numeric(df_DummyCV$phat)
-  phat_DummyCV <- mean(df_DummyCV$phat)
+  phat_DummyCV <- mean(as.numeric(df_DummyCV$phat))
+  perp_DummyCV <- perplexity(as.numeric(df_DummyCV$phat), df_DummyCV$tmv)
   
   
-  
-  l.acc.DummyCV = c(l.acc.DummyCV,phat_DummyCV)
-  l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
-  l.perp.DummyCV = c(l.perp.DummyCV)
-}
+#  l.acc.DummyCV = c(l.acc.DummyCV,phat_DummyCV)
+#  l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
+#  l.perp.DummyCV = c(l.perp.DummyCV)
+#}
 
 
 
 npf_results[nrow(npf_results)+1,] <- c("Dummy", 
                                        round(phat_Dummy_train,3), 
                                        round(phat_Dummy,3), 
-                                       round(mean(l.acc.DummyCV),3), 
+                                       round(phat_DummyCV,3), 
                                        round(perplexity(phat_Dummy_train, train_main_value),3), 
                                        round(perplexity(phat_Dummy, train_main_value),3),
-                                       "")
+                                       round(perp_DummyCV,3))
 
 
 ```
