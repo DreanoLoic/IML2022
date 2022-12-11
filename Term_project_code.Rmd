@@ -29,7 +29,7 @@ CV.rep=100
 
 ## Description of data
 
-In the project a data about new particle formation, NPF, is used. The data is divided into training data (npf_train.csv) and testing data (npf_test_hidden.csv) and it includes 104 variables relating to daily measurements taken in Hyytiälä forestry field station. The number of observations in training data is 464 and 965 in testing data.
+In the project a data about new particle formation, NPF, is used. The data is divided into training data (npf_train.csv) and testing data (npf_test_hidden.csv) and it include ${104}$ variables relating to daily measurements taken in Hyytiälä forestry field station. The number of observations in training data is ${464}$ and ${965}$ in testing data.
 
 ```{r, warning=FALSE,echo=FALSE,message=F,warning=FALSE}
 npf <- read.csv("npf_train.csv")
@@ -43,7 +43,7 @@ kable(df1, digits = 3, caption = "Summary of the dataset")
 # str(npf)
 ```
 
-Some of the variables like temperature T and CO2 are measured in different heights. The height is indicated in the name of the variable, for example, T84.mean is the mean temperature at 8.4 meters above the mast base. The data includes also a response variable indicating if a NPF event has happened during the day or not. In the project a binary classifier is build to predict if an NPF event will happen or not during the day according to the observed measurements.
+Some of the variables like temperature T and CO2 are measured in different heights. The height is indicated in the name of the variable, for example, T84.mean is the mean temperature at ${8.4}$ meters above the mast base. The data includes also a response variable indicating if a NPF event has happened during the day or not. In the project a binary classifier is build to predict if an NPF event will happen or not during the day according to the observed measurements.
 
 ## Preprocessing data
 
@@ -96,9 +96,9 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
 
 As we can see, there are a lot of highly correlated variables and since they carry the same information, keeping all of them would not improve the predictivity of our models. In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we will remove the highly correlated variables.
 
-To do so the variables are clustered together based on their correlation; every pairs of variables which have an absolute correlation greater than 0.8 are clustered together. Then a random variable from each cluster is kept for further analysis.
+To do so the variables are clustered together based on their correlation; every pairs of variables which have an absolute correlation greater than ${0.8}$ are clustered together. Then a random variable from each cluster is kept for further analysis.
 
-The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only 26 variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
+The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only ${26}$ variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
 
 ```{r, clean based on correlation,message=FALSE,warning=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -212,15 +212,15 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 ## Performance measures
 
-To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of 2 corresponds to coin flipping.
+To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of ${2}$ corresponds to coin flipping.
 
-If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than 0.5. Otherwise the observation is classified as "nonevent".
+If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than ${0.5}$. Otherwise the observation is classified as "nonevent".
 
-Performance measures are calculated using validation method and 10-fold Cross-Validation. For validation method the training data is randomly divided into 2 equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
+Performance measures are calculated using validation method and ${10}$-fold Cross-Validation. For validation method the training data is randomly divided into ${2}$ equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
 
-Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into 10 folds and performance measures are calculated using each fold as a validation data in turn. Since, a single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. The cross-validation procedure is repeated 100 times and the mean result across all folds from all runs are reported.
+Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into ${10}$ folds and performance measures are calculated using each fold as a validation data in turn. Since, a single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. The cross-validation procedure is repeated ${100}$ times and the mean result across all folds from all runs are reported.
 
-The increase of repetition increase also the risk to get probabilities values of 1 or 0, in that case the calculation of the perplexity isn't possible. Thus, in order to get a finite number result, 1 values are transform to 0.999999999 and 0 values are transform to 0.000000001.
+The increase of the repetition increases also the risk to get values of ${1}$ or ${0}$ for probabilities, and in that case the calculation of the perplexity isn't possible. Thus, in order to get a finite number result, the values ${0.000000001}$ and ${0.999999999}$ are used instead of ${0}$ and ${1}$ respectively.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -291,11 +291,11 @@ autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)
 #        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 ```
 
-The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only 39.61 % of the variance in the data and the second PC (PC2) 14,95 %. Together they explain only 54,56 % of the variance which is quite poor result the target being more than 80 %.
+The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only ${39.61 \%}$ of the variance in the data and the second PC (PC2) ${14,95 \%}$. Together they explain only ${54,56 \%}$ of the variance which is quite poor result the target being more than ${80 \%}$.
 
 From the biplot we can also see that there are a couple of outliers in the bottom right corners. For now, we leave them to be and handle them during modelling if needed.
 
-To see how many PCs are needed to explain more than 80 % of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
+To see how many PCs are needed to explain more than ${80 \%}$ of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
 
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=TRUE}
@@ -319,7 +319,7 @@ plot_PVE(pca.npf)
 
 ```
 
-For the original data we would need 10-20 PCs to explain most of the variance.
+For the original data we would need ${10-20}$ PCs to explain most of the variance.
 
 To see how the results are changed after cleaning the data from correlated variables PCA is also done for the cleaned data. The biplot is shown below:
 
@@ -355,7 +355,7 @@ autoplot(pca.npf.clean,data=npf_pca_clean,loadings=TRUE,colour="class2",loadings
 
 ```
 
-The loading vectors are not as overlapped as previously but the PVE is still quite poor: the two first PCs explains only 38,61 % of the variance. 
+The loading vectors are not as overlapped as previously but the PVE is still quite poor: the two first PCs explains only ${38,61 \%}$ of the variance. 
 
 Again, PVE by each principal component and the cumulative PVE are investigated:
 
@@ -370,9 +370,9 @@ plot_PVE(pca.npf.clean)
 
 ```
 
-We can see that about 10 first principal components should be used to explain about 80 % of the variance.
+We can see that about ${10}$ first principal components should be used to explain about ${80 \%}$ of the variance.
 
-The PCA shows that we could reduce the dimensionality of the data from 26 variables (in cleaned data) to some extend. We are going to do that later by using the results of the PCA together with Naive Bayes. In next section we first investigate some other methods which include also feature selections.
+The PCA shows that we could reduce the dimensionality of the data from ${26}$ variables (in cleaned data) to some extend. We are going to do that later by using the results of the PCA together with Naive Bayes. In next section we first investigate some other methods which include also feature selections.
 
 ## Models including feature selection
 
@@ -459,13 +459,13 @@ npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso",
 round(cv.lambda,3)
 ```
 
-The estimated coefficients with the selected lambda in training data (with 232 observations) are
+The estimated coefficients with the selected lambda in training data (with ${232}$ observations) are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
 #coef(m.lassoCV)
 ```
-As we can see, a variable selection has been done since only 15 variables have a nonzero coefficient and some of them are still close to zero. 
+As we can see, a variable selection has been done since only ${15}$ variables have a nonzero coefficient and some of them are still close to zero. 
 
 2) Random Forest
 
@@ -473,7 +473,7 @@ Decision trees are learning methods that segment observations into regions. The 
 
 Random Forest builds a number of decision trees using each time a sample of training data, sampling done by bootstrapping. Predictions are averages of the resulting trees. During each split only one of the given number of randomly selected variables are considered. By reducing the number of variables the correlation between the trees is reduced.
 
-To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value 1 when an event has occurred and value 0 in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used one third of the variables in the data in case of regression tree.
+To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value ${1}$ when an event has occurred and value ${0}$ in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used one third of the variables in the data in case of regression tree.
 
 Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -499,7 +499,7 @@ phat_RF <- predict(rf.npf, newdata = npf_valid.rf)
 kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
 
-There are 20 observations predicted to be nonevent even though event has occurred and respectively 15 observations given the false prediction of event. All together, the accuracy in validation set is 84,9 %.
+There are ${20}$ observations predicted to be nonevent even though event has occurred and respectively ${15}$ observations given the false prediction of event. All together, the accuracy in validation set is ${84,9 \%}$.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
@@ -672,7 +672,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes",
 
 ```
 
-In addition to using Naive Bayes with all 26 variables in the cleaned data, we use Naive Bayes after reducing dimensionality by PCA. This means, that we use the selected number of the principal component score vectors as an input to the model. To decide the number of the PCs to use, we look at the accuracy of the model in validation data with different number of first PCs used (see the picture below). The highest accuracy is marked with red.
+In addition to using Naive Bayes with all ${26}$ variables in the cleaned data, we use Naive Bayes after reducing dimensionality by PCA. This means, that we use the selected number of the principal component score vectors as an input to the model. To decide the number of the PCs to use, we look at the accuracy of the model in validation data with different number of first PCs used (see the picture below). The highest accuracy is marked with red.
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 #perfoming PCA to the whole, cleaned data (npf_train.csv and npf_hidden.csv cleaned from correlated variables) 
@@ -750,7 +750,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 
 3) Logistic regression
 
-To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the 26 variables. We use scaled data to avoid dominance of variables measured in high magnitudes.
+To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the ${26}$ variables. We use scaled data to avoid dominance of variables measured in high magnitudes.
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
@@ -831,7 +831,7 @@ colnames(knn.acc.table)<-c("k", "accuracy")
 kable(knn.acc.table)
 ```
 
-When k is 5 or 10, the accuracy is highest. To avoid overfitting we select k = 10 to be one of the methods to compare with other methods.
+When k is ${5}$ or ${10}$, the accuracy is highest. To avoid overfitting we select k ${= 10}$ to be one of the methods to compare with other methods.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
@@ -908,12 +908,11 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
-As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all 26 variables performs surprisingly well. However, perplexity is better when variable selection is done with Lasso. 
+As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all ${26}$ variables performs surprisingly well. However, perplexity is better when variable selection is done with Lasso. 
 
-Naive Bayes with all 26 variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. 10-NN performance near the performance of Naive Bayes with PCA.
+Naive Bayes with all ${26}$ variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. The ${10}$-NN performance is close to the performance of Naive Bayes with PCA.
 
 As expected, the performance of dummy model is worst and is used only as a reference. 
---- This text needs to be updated after the codes are ready!
 
 According to the investigated performance measures logistic regression with Lasso is selected as a classifier.
 
@@ -926,7 +925,7 @@ According to the performance comparison we select logistic regression with Lasso
 
 ## Challenge 11.12.2022
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than 0.5 the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same type that occurs mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of 48,7 %.
+After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than ${0.5}$ the observation is labeled as "event" and otherwise "nonevent". The type of the event was set to be the same type that occurs mostly in the training data. The table below shows the frequencies of different event types in the training data when the event has happened. The type "II" has the highest frequency of ${48,7 \%}$.
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 
@@ -970,7 +969,7 @@ mean(l.acc.LGLCV)
 
 ## Annex: Histograms of variables
 
-After removing variables with high correlation to other variables 26 variables are left in the data. The histograms give an overview of the values of the variables:
+After removing variables with high correlation to other variables ${26}$ variables are left in the data. The histograms give an overview of the values of the variables:
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE,fig.show="hold", out.width="30%"}
 par(mar = c(4, 4, .1, .1))
