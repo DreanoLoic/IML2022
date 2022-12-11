@@ -21,6 +21,7 @@ library(tree)
 library(glmnet)
 library(corrplot)
 library(rstatix)
+library(reprtree)
 opts_chunk$set(echo = TRUE)
 #Value of repetion of CV
 CV.rep=100
@@ -243,13 +244,17 @@ npf_valid <- npf.all.clean[-train_id,]
 class2_num_train <- c(ifelse(npf_train$class2=="event",1,0))
 class2_num <- c(ifelse(npf_valid$class2=="event",1,0))
 class2_num_all <- c(ifelse(npf.all.clean$class2=="event",1,0))
-
+options(digits=10)
 ## accuracy if we know the probabilities of ones
 accuracy <- function(p, y) mean(ifelse(p >= 0.5, 1, 0) == y)
 ## perplexity if we know the probabilities of ones
-perplexity <- function(p, y) exp(-mean(log(ifelse(y == "event", 
-                                                  ifelse(p==0,1*10^-100,p),
-                                                  ifelse(p==1,1*10^-100,1 - p)))))
+perplexity <- function(p, y) {
+  ind.1= which(p=="1")
+  p[ind.1]=0.999999999
+  ind.0= which(p=="0")
+  p[ind.0]=0.000000001
+  exp(-mean(log(ifelse(y == "event", p, 1 - p))))
+}
 
 #initialization of result table
 npf_results <- data.frame(matrix(ncol = 7))
@@ -493,7 +498,7 @@ As we can see, no misclassification is done in training data. To see how well th
   }
   x
   plot(x, type='uniform')
-  text(x,)
+  text(x)
   # labelBG(x)
   # labelYN(x)
   title(main=main)
@@ -535,6 +540,7 @@ for (l in seq(CV.rep)){
   l.acc.RF_CV = c(l.acc.RF_CV,accuracy(phat_RF_CV, class2_num_all))
   l.perp.RF_CV = c(l.perp.RF_CV,perplexity(phat_RF_CV, npf.all.clean$class2))
 }
+l.perp.RF_CV=l.perp.RF_CV[-which(is.nan(l.perp.RF_CV))]
 #Performance measures into the table
 npf_results[nrow(npf_results)+1,] <- c("Random Forest", 
                                        round(accuracy(phat_RF_train, class2_num_train),3), 
