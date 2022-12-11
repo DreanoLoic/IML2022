@@ -560,8 +560,9 @@ The importance of variables are:
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
 
+--- we should tell what the pictures include and what can be learned from them.
+
 We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
---- we should add explanations to %incMSE and IncNodePurity and do some conclusions of the pictures
 
 The performance of the classifiers investigated so far are:
 
