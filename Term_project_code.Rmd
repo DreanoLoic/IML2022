@@ -29,7 +29,7 @@ CV.rep=100
 
 ## Description of data
 
-In the project a data about new particle formation, NPF, is used. The data is divided into training data (npf_train.csv) and testing data (npf_test_hidden.csv) and it include ${104}$ variables relating to daily measurements taken in Hyytiälä forestry field station. The number of observations in training data is ${464}$ and ${965}$ in testing data.
+In the project a data set of new particle formation, NPF, is used. The data is divided into training data (npf_train.csv) and testing data (npf_test_hidden.csv) and it include ${104}$ variables relating to daily mean and standard deviation measurements taken in Hyytiälä forestry field station. The number of observations in training data is ${464}$ and ${965}$ in testing data.
 
 ```{r, warning=FALSE,echo=FALSE,message=F,warning=FALSE}
 npf <- read.csv("npf_train.csv")
@@ -44,14 +44,14 @@ kable(df1, digits = 3, caption = "Summary of the dataset")
 # str(npf)
 ```
 
-Some of the variables like temperature T and CO2 are measured in different heights. The height is indicated in the name of the variable, for example, T84.mean is the mean temperature at ${8.4}$ meters above the mast base. The data includes also a response variable indicating if a NPF event has happened during the day or not. In the project a binary classifier is build to predict if an NPF event will happen or not during the day according to the observed measurements.
+Some of the variables like temperature T and carbon dioxide concentration CO2 are measured in different heights. The height is indicated in the name of the variable, for example, variable "T84.mean" is the mean temperature at ${8.4}$ meters above the mast base during a day. The data includes also a response variable "class4" indicating if a NPF event has happened during the day or not. In the project a binary classifier is build to predict if an NPF event happens or not during a day according to observed measurements.
 
 ## Preprocessing data
 
-The data includes also some variables that are not needed as variables. A summary of the the variables in training data is below:
+The data includes variables that are not used as predictors. A summary of the the variables in training data is below:
 
 ```{r, message=FALSE,echo=FALSE}
-summary(npf[,1:4])
+summary(npf[,c(1,2,4)])
 # check that there is no variable with sd = 0 and remove them (only work for numerical or factor variable)
 # npf.var = npf[, -which(apply(npf, 2, sd) == 0)]
 # same goal but based on the length of the result of the unique function()
@@ -71,9 +71,9 @@ npf.var$class2[npf$class4 =="nonevent"] <- "nonevent"
 npf.var = npf.var[,c(1,102,2:101)]
 ```
 
-## Data exploration
+## Exploration of the training data
 
-Because the data includes same measurements at different heights it is expected that there are correlation between variables. Correlations between different mean values are shown in the matrix below:
+Because the data includes the same measurements at different heights it is expected that there are correlation between variables. Correlations between different mean values are shown in the matrix below:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,fig.align="center"}
 
@@ -85,7 +85,7 @@ corrplot(cm, order = "FPC", tl.cex=0.5, tl.col= "black",
      mar=c(0,0,1,0))
 
 ```
-The same matrix for different standard deviation values is
+The correlation matrix for standard deviations is
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,fig.align="center"}
 # the correlation for the standard deviation variable 
 cm_sd <- cor(npf.var[, endsWith(colnames(npf.var), ".std")])
@@ -95,11 +95,11 @@ corrplot(cm_sd, order = "FPC", tl.cex=0.5, tl.col= "black",
      mar=c(0,0,1,0))
 ```
 
-As we can see, there are a lot of highly correlated variables and since they carry the same information, keeping all of them would not improve the predictivity of our models. In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we will remove the highly correlated variables.
+As we can see, there are a lot of highly correlated variables and since they carry the same information, keeping all of them would not improve the predictivity of our models. In order to increase the power of our models to identify independent variables that are statistically significant and to make them simpler to interpret (simpler model in general) we remove the highly correlated variables.
 
 To do so the variables are clustered together based on their correlation; every pairs of variables which have an absolute correlation greater than ${0.8}$ are clustered together. Then a random variable from each cluster is kept for further analysis.
 
-The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only ${26}$ variables. Histograms of the variables left in the cleaned data are given in the annex. The histograms give us an idea of the values of the variables which we need, for example, in PCA to decide whether to normalize and scale the data or not.
+The correlations for mean and standard deviations after cleaning the data are shown in the pictures below as well as a table of variables left in the data (table 2). Table 3 shows that the data includes only ${26}$ variables. Histograms of the variables left in the data are in the annex. The histograms give us an idea of the values of the variables. The information is used, for example, in PCA to decide whether to normalize and scale the data or not.
 
 ```{r, clean based on correlation,message=FALSE,warning=FALSE, echo=FALSE}
 # Function that remove variables if the correlation is greater than s (have to adapt)
@@ -215,11 +215,11 @@ kable(df2, digits = 3,caption = "Summary of clean dataset")
 
 To compare different classifiers two measures are used: accuracy and perplexity. Accuracy is the proportion of the observations that has been classified correctly. Perplexity is a rescaled variant of log-likelihood. If perplexity equals to 1 the classifier predicts always the probability of an observation to an actual class. Perplexity of ${2}$ corresponds to coin flipping.
 
-If the method predicts a probability of an event, observation is classified as "event" if the estimated posterior probability is more than ${0.5}$. Otherwise the observation is classified as "nonevent".
+If the method predicts a probability of an event and the estimated posterior probability is more than ${0.5}$, observation is classified as "event". Otherwise the observation is classified as "nonevent".
 
-Performance measures are calculated using validation method and ${10}$-fold Cross-Validation. For validation method the training data is randomly divided into ${2}$ equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
+Performance measures are calculated using validation method and ${10}$-fold Cross-Validation on the training data. For validation method the training data is randomly divided into ${2}$ equally sized data sets: training data to fit the model and validation data to estimate the accuracy and perplexity. Accuracy and perplexity are also calculated in training data for comparison and to evaluate if there is overfitting. 
 
-Generalization accuracy and perplexity is calculated using cross-validation. The data is randomly divided into ${10}$ folds and performance measures are calculated using each fold as a validation data in turn. Since, a single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. The cross-validation procedure is repeated ${100}$ times and the mean result across all folds from all runs are reported.
+Generalization accuracy and perplexity is estimated using cross-validation to the training data. The data is randomly divided into ${10}$ folds and performance measures are calculated using each fold as a validation data in turn. A single run of the k-fold cross-validation procedure may result in a noisy estimate of model performance. In fact, different splits of the data may result in very different results. Thus, the cross-validation procedure is repeated ${100}$ times and the mean result across all folds from all runs are reported.
 
 The increase of the repetition increases also the risk to get values of ${1}$ or ${0}$ for probabilities, and in that case the calculation of the perplexity isn't possible. Thus, in order to get a finite number result, the values ${0.000000001}$ and ${0.999999999}$ are used instead of ${0}$ and ${1}$ respectively.
 
@@ -261,9 +261,11 @@ npf_results <- na.omit(npf_results)
 
 ## Investigation of the variables: PCA
 
-Principal Component Analysis (PCA) is used to study how much we can reduce dimensionality of the data but to save as much of the variability (that is, information) of the data at the same time. We do the PCA using the original training data (npf_train.csv) combined with the original testing data (npf_hidden.csv). As we can see from the histograms of the variables (see the annex), the variables are measured in different units with different magnitudes of variances. Thus, the variables are centered to have zero mean and scaled to have standard deviation one. The responses variable are removed from the data because we are using unsupervised learning method. 
+Principal Component Analysis (PCA) is used to study how much we can still reduce dimensionality of the data but to save as much of the variability (that is, information) of the data as possible at the same time. As we can see from the histograms of the variables (see the annex), the variables are measured in different units with different magnitudes of variances. Thus, the variables are centered to have zero mean and scaled to have standard deviation one.
 
-First, we do PCA to the original data before cleaning the correlated variables. The biplot of the analysis is below:
+We do the PCA using the original training data (npf_train.csv) combined with the original testing data (npf_hidden.csv). 
+
+First, we do PCA before cleaning the correlated variables. The biplot of the analysis is below:
 
 ```{r, message=FALSE, eval=TRUE,echo=FALSE,warning=FALSE}
 ## Option 1 with color -> info training and validation sets seems to cover the same space
@@ -301,9 +303,9 @@ autoplot(pca.npf,data=npf_pca,colour="class2",loadings=TRUE,loadings.label=TRUE)
 #        legend.text=element_text(size=11),legend.text.align = 0, legend.position = c(0.5,0.78))
 ```
 
-The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each in the data. We can also see that the first PC (PC1) explains only ${39.61 \%}$ of the variance in the data and the second PC (PC2) ${14,95 \%}$. Together they explain only ${54,56 \%}$ of the variance which is quite poor result the target being more than ${80 \%}$.
+The biplot includes the first two principal components (PCs), both the scores and loading vectors. Also, the proportion of variance explained (PVE) by the PC is indicated. As we can see, many of the vectors are overlapping meaning that they are correlated. This gives us a further justification to remove the correlated variables and leaving only one of each correlation cluster in the data. We can also see that the first PC (PC1) explains only ${39.61 \%}$ of the variance in the data and the second PC (PC2) ${14,95 \%}$. Together they explain only ${54,56 \%}$ of the variance which is quite poor result the target being more than ${80 \%}$.
 
-From the biplot we can also see that there are a couple of outliers in the bottom right corners. For now, we leave them to be and handle them during modelling if needed.
+From the biplot we can also see that there are a couple of outliers in the bottom right corner. For now, we leave them to be and handle them during modelling if needed.
 
 To see how many PCs are needed to explain more than ${80 \%}$ of the variance the PVE by each principal component and the cumulative PVE is shown in the figures below:
 
@@ -329,9 +331,9 @@ plot_PVE(pca.npf)
 
 ```
 
-For the original data we would need around ${10}$ PCs to explain most of the variance.
+For the original data we would need around ${5-10}$ PCs to explain most of the variance.
 
-To see how the results are changed after cleaning the data from correlated variables PCA is also done for the cleaned data. The biplot is shown below:
+To see how the results are changed after cleaning the data from correlated variables PCA is also done for the cleaned data. The biplot is
 
 ```{r, message=FALSE,echo=FALSE}
 
@@ -382,17 +384,17 @@ plot_PVE(pca.npf.clean)
 
 We can see that about ${10}$ first principal components should be used to explain about ${80 \%}$ of the variance.
 
-The PCA shows that we could reduce the dimensionality of the data from ${26}$ variables (in cleaned data) to some extend. We are going to do that later by using the results of the PCA together with Naive Bayes. In next section we first investigate some other methods which include also feature selections.
+The PCA shows that we could still reduce the dimensionality of the data from ${26}$ variables to some extend. We are going to do that later by using the results of the PCA together with Naive Bayes. In next section we first investigate some other methods which already include feature selection.
 
 ## Models including feature selection
 
-Some methods include variable selection in itself, like Lasso and decision trees. We investigate logistic regression with Lasso and random forest. The accuracy of the approaches are also calculated as well as perplexity of logistic regression with Lasso.
+Some methods include variable selection in itself, like Lasso and decision trees. In the project We investigate logistic regression with Lasso and random forest.
 
 1) Logistic regression with Lasso
 
-Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero. As we can see from the histograms in the annex the variables are measured in different units and scales. To make sure that the magnitude of a variable does not give too much weight we use data that is normalized to have zero mean and scaled to have unit variance.
+Logistic regression is a discriminant classifier which assumes that the log odds is linear in variables. When combined with Lasso a subset selection of variables are done by adding a so called penalty term to residual sum of squares which is minimized in parameter estimation process. The bigger the estimated coefficients of the variables are the bigger the penalty. The penalty term forces some of the coefficients to zero resulting in variable selection at the same time. As we can see from the histograms in the annex the variables are measured in different units and scales. To make sure that the magnitude of a variable does not give too much weight we use data that is normalized to zero mean and scaled to unit variance.
 
-The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. For example, in validation approach the selected lambda is
+The amount of penalty depends on a coefficient called lambda. The value of lambda is selected by cross-validation so that the value of the test error is minimized. 
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 # Groups creator
@@ -466,10 +468,10 @@ npf_results[nrow(npf_results)+1,] <- c("Log reg Lasso",
                                        round(perplexity(phat_LGLCV_train, npf_train$class2),3), 
                                        round(perplexity(phat_LGLCV, npf_valid$class2),3), 
                                        round(mean(l.perp.LGLCV),3))
-round(cv.lambda,3)
+#round(cv.lambda,3)
 ```
 
-The estimated coefficients with the selected lambda in training data (with ${232}$ observations) are
+The estimated coefficients and the lambda used in training data (with ${232}$ observations) are
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 m.lassoCV %>% tidy() %>% kable(digits = 3)
@@ -481,9 +483,9 @@ As we can see, a variable selection has been done since only ${15}$ variables ha
 
 Decision trees are learning methods that segment observations into regions. The segmentation is done recursively using binary decision rules which minimize the selected measure like residual sum of squares (RSS) in case of regression tree or e.g. classification error rate or Gini index in case of classification tree. A prediction for an observation belonging to a certain region is given by the mean of responses of the training observations in the same region (regression tree) or by the label to which the majority of the training observations belong to in the same region (classification tree). 
 
-Random Forest builds a number of decision trees using each time a sample of training data, sampling done by bootstrapping. Predictions are averages of the resulting trees. During each split only one of the given number of randomly selected variables are considered. By reducing the number of variables the correlation between the trees is reduced.
+Random Forest builds a number of decision trees using each time a sample of training data, sampling done by bootstrapping. Predictions are averages of the resulting trees. During each split in tree growing process only one of the given number of randomly selected variables are considered. By reducing the number of variables, which are consider during each split, the correlation between different trees is reduced.
 
-To get predictions of probabilities of event given the observations when using random forest we change the response variable (class2) to a dummy variable: it gets a value ${1}$ when an event has occurred and value ${0}$ in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used one third of the variables in the data in case of regression tree.
+To get predictions of probabilities of event given the observations we redefine the response variable class2 to be a dummy variable: it gets a value ${1}$ when an event has occurred and value ${0}$ in case of nonevent. Nine variables are considered during each split. The selected number equals to the commonly used one third of the variables in the data in case of regression tree. We use normalized and scaled data.
 
 Confusion matrix for training data is
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -500,7 +502,7 @@ phat_RF_train <- predict(rf.npf, newdata = npf_train.rf)
 kable(table(ifelse(phat_RF_train >= 0.5, 1, 0), npf_train$class2))
 ```
 
-As we can see, no missclassification is done in training data. To see how well the model performs on validation set, we look at the confusion matrix for validation data set:
+As we can see, no missclassification is done. To see how well the model performs on validation set, we look at the confusion matrix for validation data set:
 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
@@ -509,7 +511,7 @@ phat_RF <- predict(rf.npf, newdata = npf_valid.rf)
 kable(table(ifelse(phat_RF >= 0.5, 1, 0), npf_valid$class2))
 ```
 
-There are ${20}$ observations predicted to be nonevent even though event has occurred and respectively ${15}$ observations given the false prediction of event. All together, the accuracy in validation set is ${84,9 \%}$.
+There are ${20}$ observations predicted to be nonevent even though event has occurred and ${15}$ observations with the false prediction of event. All together, the accuracy in validation set is ${84,9 \%}$.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 #Cross-Validation
@@ -552,13 +554,11 @@ The importance of variables are:
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 varImpPlot(rf.npf, cex=0.6, main = "Random Forest")
 ```
-The picture above report the values of two variables:
-
-  - Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable.
-  
-  - Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
+The picture above report the values of two variables: Mean Decrease Accuracy (%IncMSE) that shows how much our model accuracy decreases if we leave out that variable and Mean Decrease in MSE (IncNodePurity) that is a measure of variable importance based on the MSE.
 
 The higher the value of mean decrease accuracy or mean decrease Gini score, the higher the importance of the variable to our model. We can see that random forest do some kind of a variable selection since only some of the variables have a significant importance in forming the regions and thus, the predictions. However, the most important variables are not the same as with logistic regression with Lasso.
+
+### Perfomance of the models
 
 The performance of the classifiers investigated so far are:
 
@@ -566,7 +566,7 @@ The performance of the classifiers investigated so far are:
 kable(npf_results)
 ```
 
-Even though the accuracy of random forest in validation set is better than logistic regression with Lasso the performance estimated by cross-validation is poor. Especially, cross-validated perplexity of logistic regression with Lasso seems to be very good.
+Even though the accuracy of random forest on validation set is better than of logistic regression with Lasso the performance of random forest estimated by cross-validation is poor. All together, logistic regression with Lasso clearly outperforms random forest. Especially, cross-validated perplexity of logistic regression with Lasso seems to be good.
 
 ## Other models
 
@@ -639,7 +639,7 @@ npf_results[nrow(npf_results)+1,] <- c("Dummy",
 
 2) Naive Bayes
 
-Naive Bayes is a generative classifier which assumes that the variables in each class (event or nonevent) are independent. It can be assumed that this is not the case in NPF data, but Naive Bayes can still produce quite decent results. Naive Bayes assumes that the variables are from Gaussian distribution. Thus, no scaling of the data is needed since it doesn't affect the predictions.
+Naive Bayes is a generative classifier which assumes that the variables in each class are independent and are from Gaussian distribution. It can be assumed that the assumption of independence is not the case in NPF data, but Naive Bayes can still produce quite decent results. No scaling of the data is needed since it doesn't affect the predictions.
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 
@@ -684,7 +684,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes",
 
 ```
 
-In addition to using Naive Bayes with all ${26}$ variables in the cleaned data, we use Naive Bayes after reducing dimensionality by PCA. This means, that we use the selected number of the principal component score vectors as an input to the model. To decide the number of the PCs to use, we look at the accuracy of the model in validation data with different number of first PCs used (see the picture below). The highest accuracy is marked with red.
+In addition to using Naive Bayes with all ${26}$ variables in the cleaned data, we use Naive Bayes after reducing dimensionality by PCA. This means, that we use the principal component score vectors as an input to the model. To decide the number of the PCs to use, we look at the accuracy of the model in validation data with different number of first PCs used (see the picture below). The highest accuracy is marked with red.
 
 ```{r,message=FALSE,warning=FALSE,echo=FALSE}
 #perfoming PCA to the whole, cleaned data (npf_train.csv and npf_hidden.csv cleaned from correlated variables) 
@@ -708,7 +708,7 @@ i <- which.max(acc_NB); points(i,acc_NB[i],pch=16,col="red")
 legend("bottomright",c("accuracy"),lty=c("solid"),pch=c(1))
 ```
 
-The highest accuracy is received when using the five first PCs so this model is added to the comparison of methods.
+The highest accuracy is received when using the five first PCs, so this model is added to the comparison of methods.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 #selected number of PC
@@ -762,7 +762,7 @@ npf_results[nrow(npf_results)+1,] <- c("Naive Bayes with PCA",
 
 3) Logistic regression
 
-To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the ${26}$ variables. We use scaled data to avoid dominance of variables measured in high magnitudes.
+To compare the results with logistic regression with Lasso we train also logistic regression on the training data with all the ${26}$ variables. We use normalized and scaled data to avoid dominance of variables measured in high magnitudes.
 
 ```{r, message=FALSE, echo=FALSE,warning=FALSE}
 
@@ -814,9 +814,9 @@ npf_results[nrow(npf_results)+1,] <- c("Logistic regression",
 
 4) k Nearest Neighbor (k-NN)
 
-In k-NN the closest k training data points to the observation are selected and the observation is labeled with the class which occurs most often within the k closest training data points (that is, has the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately and decrease the training error but this may end up to overfitting.
+In k-NN an observation is labeled with the class which occurs most often within the k closest training data points to the observation (that is, the class with the largest proportion). Because the distance is used the data needs to be scaled. Parameter k controls the flexibility of the classifier. The smaller the k the more flexible the decision boundary is. With a very small k the classifier can classify the training data more accurately but this may end up to overfitting.
 
-Different values of k are tried for choosing the optimal k. Accuracy on the validation set for each of the selected k are calculated and are respectively 
+Different values of k are tried to choose the optimal k. Accuracy on the validation set for each k are shown in the table below:
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE,eval=T}
 
@@ -920,24 +920,24 @@ Performance measures for the methods are:
 kable(npf_results)
 ```
 
-As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all ${26}$ variables performs surprisingly well. However, perplexity is better when variable selection is done with Lasso. 
+As we already concluded logistic regression with Lasso performs better than random forest. Logistic regression with all ${26}$ variables performs surprisingly well. However, perplexity is better when variable selection is done by Lasso. Cross-validated performance of random forest is also poor compared to other methods. Only Naive Bayes' perplexity is worse than random forest. 
 
-Naive Bayes with all ${26}$ variables performs poorly producing high perplexities. When the dimensionality is reduced by using PCA the performance improves significantly but does not outperform logistic regression models. The ${10}$-NN is close to the performance of Naive Bayes with PCA.
+Naive Bayes with all ${26}$ variables performs poorly producing high perplexities. When the dimensionality is reduced by PCA the performance improves significantly but does not outperform logistic regression models. Perfomrance of ${10}$-NN is close to the performance of Naive Bayes with PCA.
 
-As expected, the performance of dummy model is worst and is used only as a reference. 
+As expected, the performance of dummy model is not good and it corresponds guessing if an event happens or not (like coin flipping). However, Naive Bayes performs even worse than dummy model at least when we look at perplexities. 
 
-According to the investigated performance measures logistic regression with Lasso is selected as a classifier.
+According to the investigated performance measures logistic regression with Lasso is selected as a classifier. It has the highest cross-validated accuracy and lowest cross-validated perplexity, and the results are at the same level on validation set, too.
 
 
 ## Summary
 
-We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of the models. We investigated  the importance of the variables left in the data by principal component analysis. The analysis showed that dimensionality could still be somewhat reduced. In stead of further selecting a subset of the 26 variables we used methods which included features of variable selection, like Lasso combined with logistic regression and dimensionality reduction through PCs combined with Naive Bayes. When appropriate we used scaled data to avoid the variables with high magnitudes to dominate the model fitting and predictions. 
+We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of the models. PCA showed that dimensionality could still be somewhat reduced. In stead of further selecting a subset of the 26 variables we used methods which included features of variable selection, like Lasso combined with logistic regression, random forest and PCs with Naive Bayes. When appropriate we used normalized and scaled data to avoid the variables with high magnitudes to dominate the model fitting and predictions. 
 
-According to the performance comparison we select logistic regression with Lasso as our classifier. It is used to normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and smallest perplexity in cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in the different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso and reduced number of variables we also reduce the possibility of overfitting the model. The case of overfitting is investigated by using cross-validation to estimate the generalization error. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships. After cleaning the data from correlated variables and using Lasso together with logistic regression we can see from the previous result table that the performance measures of the model are pretty good.
+According to the performance comparison we selected logistic regression with Lasso as our binary classifier. It is used on normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and the smallest perplexity in cross-validation and the performance is stablebetween validation approach and cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso to reduce number of variables we also reduce the possibility of overfitting the model. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships.
 
-## Performance of the selected method on testing data
+### Performance of the selected method on testing data
 
-After selecting the model we trained it using the original, cleaned training data (npf_train.csv). The estimates of the probabilities of the observations in testing data (npf_hidden.csv) to be classified as "event" were predicted. If the probability is more than ${0.5}$ the observation is labeled as "event" and otherwise "nonevent".
+Selected method was trained using the original, cleaned training data (npf_train.csv) and predictions on testing data (npf_hidden.csv) was generated. Unfortunately, the results turned out to be very poor:
 
 ```{r, message=FALSE, echo=FALSE,warning=T, eval = FALSE}
 # CHALLENGE 11.12.2022
@@ -954,8 +954,6 @@ colnames(events_freq) <- c("frequency")
 kable(events_freq, digits =3)
 
 ```
-
-The accuracy and perplexity on testing data with 965 observations are
 
 ```{r, message=FALSE, echo=FALSE,warning=T}
 set.seed(42)
@@ -990,7 +988,7 @@ kable(performance)
 #For the final CSV we must run the lint.R (code to use in the terminal: Rscript -- vanilla lint.R answers.csv)
 ```
 
-Compared to the performance in validation and cross-validation approaches, the performance has reduced significantly. The performance indicates that the method is guessing if the event will happen or not with no prediction power. With this performance we should check the data process and feature selections again and try some other methods, too. For example, support vector machine with radial kernel (gamma = 0.5, cost = 0.1) gives promising performance measures on testing data: 
+Compared to the performance in validation and cross-validation approaches, the performance has reduced significantly. The performance on testing data indicates that the method has no real prediction power. With this performance we should check the data process and feature selections again and try some other methods, too. For example, support vector machine with radial kernel (gamma = 0.5, cost = 0.1) gives promising performance measures on testing data: 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 set.seed(42)
