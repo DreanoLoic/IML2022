@@ -1154,6 +1154,15 @@ set.seed(42)
 train_id <- sample(1:nrow(npf), 232)
 npf_train <- npf.all.clean[train_id,]
 npf_valid <- npf.all.clean[-train_id,]
-
-
 ```
+
+## Grading section
+
+Grade for the deliverables: 4
+
+We have showed a good understanding of the topics. We have proceeded in soundly manner from data exploration to data cleaning, data analysis and investigated a variety of different methods on the data. We have used validation and cross-validation approaches to get a good, overall understanding of the performance of the methods and generally accepted criterion to select the classifier. However, there seems to be some shortcomings or missed insights since our binary classifier didn’t succeed in the challenge. The results from the challenge and some video pitches gave us ideas to improve our work but unfortunately it was too late to do amendments. Our report shows a good quality: it’s readable and written in coherent manner. The processes and selection done are clearly argued so that the reader can critically evaluate them.
+
+Grade for the group: 5
+
+We had a great group! Discussions were analytical, and we helped each other to learn the topics and do the exercises as well as the project itself. Everyone had a freedom to give an input suitable for his/her own situation. We did the project in time and with good quality. We all brought input from our own experience which completed each other. Thus, all were also able to do the parts of the project corresponding to own strengths. We all took responsible of the project and wanted to help each other. We had fun with each other!
+
