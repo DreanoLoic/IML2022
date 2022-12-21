@@ -201,7 +201,7 @@ corrplot(cm_3, method = 'circle', type = 'upper', insig='blank',
          title="Correlation matrix of variables for the clean dataset", 
          mar=c(0,0,1,0) )
 
-df3 = data.frame(var80[1:7],var80[8:14],var80[15:21],c(var80[21:26],""))
+df3 = data.frame(var80[1:7],var80[8:14],var80[15:21], c(var80[22:27],""))
 colnames(df3)= rep("",4)
 
 kable(df3,caption = "List of kept variables")
@@ -477,7 +477,7 @@ The estimated coefficients and the lambda used in training data (with ${232}$ ob
 m.lassoCV %>% tidy() %>% kable(digits = 3)
 #coef(m.lassoCV)
 ```
-As we can see, a variable selection has been done since only ${15}$ variables have a nonzero coefficient and some of them are still close to zero. 
+As we can see, a variable selection has been done since only ${15}$ variables have a nonzero coefficient and some of them are still close to zero. The given dev.ratio ${0.69}$ is unfortunately not very good.
 
 2) Random Forest
 
