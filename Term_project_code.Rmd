@@ -149,9 +149,9 @@ elimcor_sansY<-function(X,s=0.80){
 
 npf.corr= npf.var[,-c(1,2)]
 
-# ind.corr.90 = elimcor_sansY(npf.corr,0.90)$possetap
-ind.corr.80 = elimcor_sansY(npf.corr,0.80)$possetap
-var80 = colnames(npf.corr)[ind.corr.80]
+ #ind.corr.90 = elimcor_sansY(npf.corr,0.90)$possetap
+ ind.corr.80 = elimcor_sansY(npf.corr,0.80)$possetap
+ var80 = colnames(npf.corr)[ind.corr.80]
 # npf.clean = npf.corr[ind.corr.90] # 34 variables
 
 npf.clean = npf.corr[var80] # 26 variables 
@@ -933,7 +933,7 @@ According to the investigated performance measures logistic regression with Lass
 
 We started by looking at the data and especially the correlations between variables. Correlated variables were removed from the data to improve the predictivity of the models. PCA showed that dimensionality could still be somewhat reduced. In stead of further selecting a subset of the 26 variables we used methods which included features of variable selection, like Lasso combined with logistic regression, random forest and PCs with Naive Bayes. When appropriate we used normalized and scaled data to avoid the variables with high magnitudes to dominate the model fitting and predictions. 
 
-According to the performance comparison we selected logistic regression with Lasso as our binary classifier. It is used on normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and the smallest perplexity in cross-validation and the performance is stablebetween validation approach and cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso to reduce number of variables we also reduce the possibility of overfitting the model. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships.
+According to the performance comparison we selected logistic regression with Lasso as our binary classifier. It is used on normalized and scaled data. We noticed that if the unscaled data is used the model will predict only events on testing data. The selected model gives the highest accuracy and the smallest perplexity in cross-validation and the performance is stable between validation approach and cross-validation. Pros of this method are that the variable selection is done by Lasso and the fact that logistic regression doesn’t make any assumptions of the distribution of the observations in different classes. We also have enough data compared to the number of variables in cleaned data to train the model properly. By using Lasso to reduce number of variables we also reduce the possibility of overfitting the model. One of the disadvantages of the model is the assumption of linear decision surface which is not usually valid. However, the method outperformed for example random forest which can handle more complex relationships.
 
 ### Performance of the selected method on testing data
 
@@ -988,10 +988,21 @@ kable(performance)
 #For the final CSV we must run the lint.R (code to use in the terminal: Rscript -- vanilla lint.R answers.csv)
 ```
 
-Compared to the performance in validation and cross-validation approaches, the performance has reduced significantly. The performance on testing data indicates that the method has no real prediction power. With this performance we should check the data process and feature selections again and try some other methods, too. For example, support vector machine with radial kernel (gamma = 0.5, cost = 0.1) gives promising performance measures on testing data: 
+Compared to the performance in validation and cross-validation approaches, the performance has reduced significantly. The performance on testing data indicates that the method has no real prediction power. With this performance we should check the data process and feature selections again and try some other methods, too. For example, support vector machine with radial kernel (gamma ${= 0.5}$, cost ${= 0.1}$) gives promising performance measures on testing data: 
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE}
 set.seed(42)
+k_sel <- c(10)
+train.X <- scale(npf.all.clean[,-1])
+test.X <- scale(npf.test.clean)
+train.Y <- npf.all.clean$class2
+test.Y <- npf_hidden_clean$class2
+
+
+npf_test.scaled <- data.frame(test.X,class2=npf_hidden_clean$class2)
+
+
+
 #gamma
 g <- c(0.5)
 #cost
@@ -1051,11 +1062,7 @@ kable(performance_rf)
 ```{r, message=FALSE,warning=FALSE, echo=FALSE, eval=FALSE}
 #10-NN
 set.seed(42)
-k_sel <- c(10)
-train.X <- scale(npf.all.clean[,-1])
-test.X <- scale(npf.test.clean)
-train.Y <- npf.all.clean$class2
-test.Y <- npf_hidden_clean$class2
+
 
 #Testing
 knn.Y <- knn(train.X, test.X, train.Y, k=k_sel,prob = T)
@@ -1075,7 +1082,7 @@ kable(performance_knn)
 
 ```{r, message=FALSE,warning=FALSE, echo=FALSE, eval=FALSE}
 #Logistic regression (scaled data)
-npf_test.scaled <- data.frame(test.X,class2=npf_hidden_clean$class2)
+
 
 phat_LG_test <- function(npf.all.clean.scaled,
   npf_test.scaled,
@@ -1158,11 +1165,11 @@ npf_valid <- npf.all.clean[-train_id,]
 
 ## Grading section
 
-Grade for the deliverables: 4
+Grade for the deliverables: ${4}$
 
 We have showed a good understanding of the topics. We have proceeded in soundly manner from data exploration to data cleaning, data analysis and investigated a variety of different methods on the data. We have used validation and cross-validation approaches to get a good, overall understanding of the performance of the methods and generally accepted criterion to select the classifier. However, there seems to be some shortcomings or missed insights since our binary classifier didn’t succeed in the challenge. The results from the challenge and some video pitches gave us ideas to improve our work but unfortunately it was too late to do amendments. Our report shows a good quality: it’s readable and written in coherent manner. The processes and selection done are clearly argued so that the reader can critically evaluate them.
 
-Grade for the group: 5
+Grade for the group: ${5}$
 
-We had a great group! Discussions were analytical, and we helped each other to learn the topics and do the exercises as well as the project itself. Everyone had a freedom to give an input suitable for his/her own situation. We did the project in time and with good quality. We all brought input from our own experience which completed each other. Thus, all were also able to do the parts of the project corresponding to own strengths. We all took responsible of the project and wanted to help each other. We had fun with each other!
+We had a great group! Discussions were analytical, and we helped each other to learn the topics and do the exercises as well as the project itself. Everyone had a freedom to give an input suitable for his/her own situation. We did the project in time and with good quality. We all brought input from our own experience which completed each other. Thus, all were also able to do the parts of the project corresponding to own strengths. We all took responsibility of the project and wanted to help each other. We had fun with each other!
 
